@@ -1,11 +1,15 @@
+{{ 'counter.css' | asset_url | stylesheet_tag }}
+
 {% liquid
   assign current_variant = product.selected_or_first_available_variant
   assign low_stock_threshold = block.settings.low_stock_threshold | default: 10
   assign initial_inventory = current_variant.inventory_quantity | default: 0
   assign initial_percentage = initial_inventory | times: 100.0 | divided_by: low_stock_threshold
+
   if initial_percentage > 100
     assign initial_percentage = 100
   endif
+
   if initial_percentage < 0
     assign initial_percentage = 0
   endif
@@ -13,236 +17,93 @@
 
 <div
   id="InventoryCounter-{{ block.id }}"
-  class="inventory-counter{% unless current_variant.available %} inventory-counter--hidden{% endunless %}"
+  class="inventory-counter inventory-counter--hidden"
   style="
+    --inventory-counter-background: {{ block.settings.background_color }};
+    --inventory-counter-text: {{ block.settings.text_color }};
+    --inventory-counter-warning: {{ block.settings.pulsing_warning_color }};
     --inventory-counter-fill: {{ block.settings.bar_fill_color }};
-    --inventory-counter-text: {{ block.settings.text_font_color }};
-    --inventory-counter-ring: {{ block.settings.pulsing_ring_color }};
   "
+  data-inventory-counter
+  data-product-id="{{ product.id }}"
+  data-initial-variant-id="{{ current_variant.id }}"
+  data-initial-inventory="{{ current_variant.inventory_quantity }}"
   data-threshold="{{ low_stock_threshold }}"
-  data-alert-template="{{ block.settings.scarcity_text_alert | escape }}"
-  data-current-variant-id="{{ current_variant.id }}"
+  data-message="{{ block.settings.scarcity_text | escape }}"
+  data-simulation-start="8"
+  data-simulation-minimum="3"
+  data-simulation-interval="12000"
+  hidden
   {{ block.shopify_attributes }}
 >
   <div class="inventory-counter__message" role="status" aria-live="polite">
     <span class="inventory-counter__pulse" aria-hidden="true"></span>
-    <span class="inventory-counter__text"></span>
+    <span data-inventory-message></span>
   </div>
+
   <div
     class="inventory-counter__track"
+    data-inventory-progress
     role="progressbar"
     aria-label="Stock remaining"
     aria-valuemin="0"
     aria-valuemax="{{ low_stock_threshold }}"
     aria-valuenow="{{ initial_inventory }}"
   >
-    <span class="inventory-counter__fill" style="width: {{ initial_percentage }}%;"></span>
+    <span
+      class="inventory-counter__fill"
+      data-inventory-fill
+      style="width: {{ initial_percentage }}%;"
+    ></span>
   </div>
+
+  <script type="application/json" data-inventory-variants>
+    {{ product.variants | json }}
+  </script>
 </div>
 
-<style>
-  #InventoryCounter-{{ block.id }} {
-    --inventory-counter-surface: rgb(255, 244, 244);
-    --inventory-counter-border: rgba(142, 31, 31, 0.16);
-    --inventory-counter-track: rgba(142, 31, 31, 0.12);
-    box-sizing: border-box;
-    width: 100%;
-    margin-top: 0.75rem;
-    padding: 0.75rem 0.875rem;
-    border: 1px solid var(--inventory-counter-border);
-    border-radius: 0.5rem;
-    background: var(--inventory-counter-surface);
-    color: var(--inventory-counter-text);
-    font-family: var(--font-body-family, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
-  }
-
-  #InventoryCounter-{{ block.id }}.inventory-counter--hidden {
-    display: none;
-  }
-
-  #InventoryCounter-{{ block.id }} .inventory-counter__message {
-    display: flex;
-    align-items: center;
-    gap: 0.625rem;
-    font-size: 0.875rem;
-    font-weight: 600;
-    line-height: 1.35;
-  }
-
-  #InventoryCounter-{{ block.id }} .inventory-counter__pulse {
-    position: relative;
-    flex: 0 0 auto;
-    width: 0.5rem;
-    height: 0.5rem;
-    border-radius: 50%;
-    background: var(--inventory-counter-ring);
-  }
-
-  #InventoryCounter-{{ block.id }} .inventory-counter__pulse::after {
-    position: absolute;
-    inset: -0.25rem;
-    border: 2px solid var(--inventory-counter-ring);
-    border-radius: 50%;
-    content: "";
-    animation: inventory-counter-pulse-{{ block.id }} 1.6s ease-out infinite;
-  }
-
-  #InventoryCounter-{{ block.id }} .inventory-counter__track {
-    height: 0.25rem;
-    margin-top: 0.625rem;
-    overflow: hidden;
-    border-radius: 999px;
-    background: var(--inventory-counter-track);
-  }
-
-  #InventoryCounter-{{ block.id }} .inventory-counter__fill {
-    display: block;
-    height: 100%;
-    border-radius: inherit;
-    background: var(--inventory-counter-fill);
-    transition: width 320ms ease;
-  }
-
-  @keyframes inventory-counter-pulse-{{ block.id }} {
-    0% { opacity: 0.8; transform: scale(0.65); }
-    75%, 100% { opacity: 0; transform: scale(1.5); }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    #InventoryCounter-{{ block.id }} .inventory-counter__pulse::after {
-      animation: none;
-    }
-
-    #InventoryCounter-{{ block.id }} .inventory-counter__fill {
-      transition: none;
-    }
-  }
-</style>
-
-<script>
-  (() => {
-    const root = document.getElementById('InventoryCounter-{{ block.id }}');
-    if (!root || root.dataset.initialized === 'true') return;
-    root.dataset.initialized = 'true';
-
-    const threshold = Math.max(1, Number(root.dataset.threshold) || 10);
-    const alertTemplate = root.dataset.alertTemplate || 'Hurry! Only [count] items left in stock!';
-    const text = root.querySelector('.inventory-counter__text');
-    const track = root.querySelector('.inventory-counter__track');
-    const fill = root.querySelector('.inventory-counter__fill');
-    const variants = {{ product.variants | json }};
-    const simulationKey = `inventory-counter-simulation-${window.location.pathname}-{{ block.id }}`;
-    let simulationTimer;
-
-    const findVariant = (variantId) => variants.find((variant) => String(variant.id) === String(variantId));
-
-    const getSelectedVariantId = (event) => {
-      const eventVariant = event?.detail?.variant || event?.detail;
-      if (eventVariant?.id) return eventVariant.id;
-
-      const productForm = root.closest('section')?.querySelector('form[action*="/cart/add"]')
-        || document.querySelector('form[action*="/cart/add"]');
-      const idInput = productForm?.querySelector('[name="id"]');
-      if (idInput?.value) return idInput.value;
-
-      return new URLSearchParams(window.location.search).get('variant') || root.dataset.currentVariantId;
-    };
-
-    const simulatedInventory = () => {
-      let count = Number(sessionStorage.getItem(simulationKey));
-      if (!Number.isFinite(count) || count < 3 || count > 7) count = 7;
-      sessionStorage.setItem(simulationKey, String(count));
-      return count;
-    };
-
-    const render = (count, available) => {
-      const normalizedCount = Math.max(0, Number(count) || 0);
-      const shouldShow = Boolean(available) && normalizedCount <= threshold;
-      root.classList.toggle('inventory-counter--hidden', !shouldShow);
-      text.textContent = alertTemplate.replaceAll('[count]', String(normalizedCount));
-      track.setAttribute('aria-valuenow', String(normalizedCount));
-      fill.style.width = `${Math.min(100, (normalizedCount / threshold) * 100)}%`;
-    };
-
-    const stopSimulation = () => {
-      if (simulationTimer) window.clearInterval(simulationTimer);
-      simulationTimer = undefined;
-    };
-
-    const startSimulation = (available) => {
-      stopSimulation();
-      let count = simulatedInventory();
-      render(count, available);
-      simulationTimer = window.setInterval(() => {
-        if (count <= 3) return stopSimulation();
-        count -= 1;
-        sessionStorage.setItem(simulationKey, String(count));
-        render(count, available);
-      }, 12000);
-    };
-
-    const update = (event) => {
-      const variant = findVariant(getSelectedVariantId(event)) || variants[0];
-      if (!variant) return root.classList.add('inventory-counter--hidden');
-
-      root.dataset.currentVariantId = variant.id;
-      const isTracked = Boolean(variant.inventory_management);
-      const inventory = Number(variant.inventory_quantity);
-
-      if (!isTracked || !Number.isFinite(inventory)) {
-        startSimulation(variant.available);
-      } else {
-        stopSimulation();
-        render(inventory, variant.available);
-      }
-    };
-
-    document.addEventListener('variant:change', update);
-    document.addEventListener('product:variant-change', update);
-    document.addEventListener('change', (event) => {
-      if (event.target.closest('variant-selects, variant-radios, form[action*="/cart/add"]')) {
-        window.setTimeout(() => update(event), 0);
-      }
-    });
-
-    update();
-  })();
-</script>
+{{ 'counter.js' | asset_url | script_tag }}
 
 {% schema %}
 {
-  "name": "Low stock counter",
+  "name": "Inventory low stock counter",
   "target": "section",
   "settings": [
     {
       "type": "number",
       "id": "low_stock_threshold",
-      "label": "Low Stock Threshold Target",
+      "label": "Low stock threshold",
       "default": 10
     },
     {
       "type": "text",
-      "id": "scarcity_text_alert",
-      "label": "Scarcity Text Alert",
+      "id": "scarcity_text",
+      "label": "Scarcity text",
       "default": "Hurry! Only [count] items left in stock! 🔥",
-      "info": "Use [count] where the current stock count should appear."
+      "info": "Use [count] where the active variant inventory should appear."
     },
     {
       "type": "color",
-      "id": "bar_fill_color",
-      "label": "Bar Fill Color",
-      "default": "#d72c0d"
+      "id": "background_color",
+      "label": "Background color",
+      "default": "#fff4f4"
     },
     {
       "type": "color",
-      "id": "text_font_color",
-      "label": "Text Font Color",
+      "id": "text_color",
+      "label": "Text color",
       "default": "#8e1f1f"
     },
     {
       "type": "color",
-      "id": "pulsing_ring_color",
-      "label": "Pulsing Ring Blink Color",
+      "id": "pulsing_warning_color",
+      "label": "Pulsing warning color",
+      "default": "#d72c0d"
+    },
+    {
+      "type": "color",
+      "id": "bar_fill_color",
+      "label": "Progress bar fill color",
       "default": "#d72c0d"
     }
   ]
