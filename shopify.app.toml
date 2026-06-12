@@ -7,13 +7,6 @@ embedded = true
 include_config_on_deploy = true
 automatically_update_urls_on_dev = true
 
-[webhooks]
-api_version = "2026-07"
-
-[access.admin]
-direct_api_mode = "online"
-embedded_app_direct_api_access = true
-
 [access_scopes]
 scopes = ""
 
