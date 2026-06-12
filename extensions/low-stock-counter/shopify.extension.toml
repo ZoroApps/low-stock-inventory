@@ -3,4 +3,5 @@ api_version = "2026-07"
 [[extensions]]
 name = "Low Stock Counter"
 handle = "low-stock-counter"
+uid = "ef0f96d7-5060-6933-62cb-43b7d97a63dbb3e47393"
 type = "theme_app_extension"
