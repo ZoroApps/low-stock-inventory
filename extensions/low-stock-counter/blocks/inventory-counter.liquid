@@ -17,6 +17,9 @@
   data-initial-variant-id="{{ active_variant.id }}"
   data-threshold="{{ threshold }}"
   data-message="{{ block.settings.alert_text | escape }}"
+  data-sold-out-message="{{ block.settings.sold_out_text | escape }}"
+  data-preview-simulation="{{ block.settings.preview_simulation }}"
+  data-preview-count="{{ block.settings.preview_stock_count }}"
   hidden
   {{ block.shopify_attributes }}
 >
@@ -139,18 +142,24 @@
     const variantSource = root.querySelector('[data-counter-variants]');
     const threshold = Math.max(1, Number(root.dataset.threshold) || 10);
     const template = root.dataset.message || 'Hurry! Only [count] items left in stock!';
-    const simulationStart = Math.min(threshold, 8);
-    const simulationMinimum = Math.min(simulationStart, 3);
+    const soldOutMessage = root.dataset.soldOutMessage || 'Sold out';
+    const previewSimulation = root.dataset.previewSimulation === 'true';
+    const previewCount = Math.max(0, Number(root.dataset.previewCount) || 8);
+    const simulationStart = 8;
+    const simulationMinimum = 3;
     const sessionKey = `zoro-low-stock:${root.dataset.productId}`;
     const variants = JSON.parse(variantSource.textContent || '[]');
     let simulationTimer;
 
     const render = (count, available) => {
       const inventory = Math.max(0, Number(count) || 0);
-      root.hidden = !available || inventory > threshold;
-      message.textContent = template.split('[count]').join(String(inventory));
+      const soldOut = !available;
+      root.hidden = !soldOut && inventory > threshold;
+      message.textContent = soldOut
+        ? soldOutMessage
+        : template.split('[count]').join(String(inventory));
       progress.setAttribute('aria-valuenow', String(inventory));
-      fill.style.width = `${Math.min(100, (inventory / threshold) * 100)}%`;
+      fill.style.width = soldOut ? '0%' : `${Math.min(100, (inventory / threshold) * 100)}%`;
     };
 
     const stopSimulation = () => {
@@ -161,8 +170,11 @@
     const readSimulation = (variantId) => {
       try {
         const state = JSON.parse(sessionStorage.getItem(sessionKey) || '{}');
-        const count = Number(state[variantId]);
-        return Number.isFinite(count) && count >= simulationMinimum ? count : simulationStart;
+        const entry = state[variantId];
+        const count = Number(typeof entry === 'object' ? entry?.count : entry);
+        return Number.isFinite(count) && count >= simulationMinimum && count <= simulationStart
+          ? count
+          : simulationStart;
       } catch (_error) {
         return simulationStart;
       }
@@ -171,7 +183,7 @@
     const saveSimulation = (variantId, count) => {
       try {
         const state = JSON.parse(sessionStorage.getItem(sessionKey) || '{}');
-        state[variantId] = count;
+        state[variantId] = { count };
         sessionStorage.setItem(sessionKey, JSON.stringify(state));
       } catch (_error) {
         // Continue without persistence when session storage is unavailable.
@@ -181,13 +193,15 @@
     const simulate = (variant) => {
       stopSimulation();
       let count = readSimulation(String(variant.id));
-      render(count, variant.available);
+      saveSimulation(String(variant.id), count);
+      render(count, true);
 
       simulationTimer = window.setInterval(() => {
+        if (document.hidden) return;
         if (count <= simulationMinimum) return stopSimulation();
         count -= 1;
         saveSimulation(String(variant.id), count);
-        render(count, variant.available);
+        render(count, true);
       }, 12000);
     };
 
@@ -207,6 +221,12 @@
 
       if (!variant) {
         root.hidden = true;
+        return;
+      }
+
+      if (previewSimulation) {
+        stopSimulation();
+        render(previewCount, true);
         return;
       }
 
@@ -248,8 +268,23 @@
     {
       "type": "number",
       "id": "low_stock_threshold",
-      "label": "Low stock threshold",
-      "default": 10
+      "label": "Show when stock is at or below",
+      "default": 10,
+      "info": "This controls visibility. It does not change the displayed stock count."
+    },
+    {
+      "type": "checkbox",
+      "id": "preview_simulation",
+      "label": "Use preview stock count",
+      "default": false,
+      "info": "Show a fixed test count instead of real inventory."
+    },
+    {
+      "type": "number",
+      "id": "preview_stock_count",
+      "label": "Preview stock count",
+      "default": 8,
+      "info": "Used only when Use preview stock count is enabled."
     },
     {
       "type": "text",
@@ -257,6 +292,12 @@
       "label": "Alert text",
       "default": "Hurry! Only [count] items left in stock! 🔥",
       "info": "Use [count] to display the active variant inventory."
+    },
+    {
+      "type": "text",
+      "id": "sold_out_text",
+      "label": "Sold out text",
+      "default": "This item is currently sold out."
     },
     {
       "type": "color",
