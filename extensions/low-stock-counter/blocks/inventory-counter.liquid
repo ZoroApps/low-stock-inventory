@@ -20,6 +20,7 @@
   data-sold-out-message="{{ block.settings.sold_out_text | escape }}"
   data-preview-simulation="{{ block.settings.preview_simulation }}"
   data-preview-count="{{ block.settings.preview_stock_count }}"
+  data-design-mode="{{ request.design_mode }}"
   hidden
   {{ block.shopify_attributes }}
 >
@@ -145,16 +146,17 @@
     const soldOutMessage = root.dataset.soldOutMessage || 'Sold out';
     const previewSimulation = root.dataset.previewSimulation === 'true';
     const previewCount = Math.max(0, Number(root.dataset.previewCount) || 8);
+    const designMode = root.dataset.designMode === 'true';
     const simulationStart = 8;
     const simulationMinimum = 3;
     const sessionKey = `zoro-low-stock:${root.dataset.productId}`;
     const variants = JSON.parse(variantSource.textContent || '[]');
     let simulationTimer;
 
-    const render = (count, available) => {
+    const render = (count, available, forceVisible = false) => {
       const inventory = Math.max(0, Number(count) || 0);
       const soldOut = !available;
-      root.hidden = !soldOut && inventory > threshold;
+      root.hidden = !forceVisible && !soldOut && inventory > threshold;
       message.textContent = soldOut
         ? soldOutMessage
         : template.split('[count]').join(String(inventory));
@@ -220,13 +222,15 @@
       const variant = variants.find((item) => String(item.id) === variantId) || variants[0];
 
       if (!variant) {
-        root.hidden = true;
+        stopSimulation();
+        if (designMode) render(previewCount, true, true);
+        else root.hidden = true;
         return;
       }
 
       if (previewSimulation) {
         stopSimulation();
-        render(previewCount, true);
+        render(previewCount, true, designMode);
         return;
       }
 
