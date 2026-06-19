@@ -20,7 +20,6 @@
   data-sold-out-message="{{ block.settings.sold_out_text | escape }}"
   data-preview-simulation="{{ block.settings.preview_simulation }}"
   data-preview-count="{{ block.settings.preview_stock_count }}"
-  data-design-mode="{{ request.design_mode }}"
   hidden
   {{ block.shopify_attributes }}
 >
@@ -29,106 +28,24 @@
     <span data-counter-message></span>
   </div>
 
-  <div
-    class="zoro-low-stock-counter__track"
-    data-counter-progress
-    role="progressbar"
-    aria-label="Stock remaining"
-    aria-valuemin="0"
-    aria-valuemax="{{ threshold }}"
-    aria-valuenow="0"
-  >
+  <div class="zoro-low-stock-counter__track" data-counter-progress role="progressbar" aria-label="Stock remaining" aria-valuemin="0" aria-valuemax="{{ threshold }}" aria-valuenow="0">
     <span class="zoro-low-stock-counter__fill" data-counter-fill></span>
   </div>
 
   <script type="application/json" data-counter-variants>
-    [
-      {% for variant in product.variants %}
-        {
-          "id": {{ variant.id | json }},
-          "available": {{ variant.available | json }},
-          "inventory_quantity": {{ variant.inventory_quantity | json }},
-          "inventory_management": {{ variant.inventory_management | json }},
-          "inventory_policy": {{ variant.inventory_policy | json }}
-        }{% unless forloop.last %},{% endunless %}
-      {% endfor %}
-    ]
+    [{% for variant in product.variants %}{"id":{{ variant.id | json }},"available":{{ variant.available | json }},"inventory_quantity":{{ variant.inventory_quantity | json }},"inventory_management":{{ variant.inventory_management | json }},"inventory_policy":{{ variant.inventory_policy | json }}}{% unless forloop.last %},{% endunless %}{% endfor %}]
   </script>
 </div>
 
 <style>
-  #LowStockCounter-{{ block.id }} {
-    box-sizing: border-box;
-    width: 100%;
-    margin-top: 0.75rem;
-    padding: 0.75rem 0.875rem;
-    border: 1px solid color-mix(in srgb, var(--zoro-counter-accent) 22%, transparent);
-    border-radius: 0.5rem;
-    background: var(--zoro-counter-background);
-    color: var(--zoro-counter-text);
-    font-family: var(--font-body-family, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
-    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
-  }
-
-  #LowStockCounter-{{ block.id }}[hidden] {
-    display: none;
-  }
-
-  #LowStockCounter-{{ block.id }} .zoro-low-stock-counter__alert {
-    display: flex;
-    align-items: center;
-    gap: 0.625rem;
-    font-size: 0.875rem;
-    font-weight: 600;
-    line-height: 1.35;
-  }
-
-  #LowStockCounter-{{ block.id }} .zoro-low-stock-counter__pulse {
-    flex: 0 0 auto;
-    width: 0.5rem;
-    height: 0.5rem;
-    border-radius: 50%;
-    background: var(--zoro-counter-accent);
-    animation: zoro-low-stock-pulse-{{ block.id }} 1.6s ease-out infinite;
-  }
-
-  #LowStockCounter-{{ block.id }} .zoro-low-stock-counter__track {
-    height: 0.25rem;
-    margin-top: 0.625rem;
-    overflow: hidden;
-    border-radius: 999px;
-    background: var(--zoro-counter-track);
-  }
-
-  #LowStockCounter-{{ block.id }} .zoro-low-stock-counter__fill {
-    display: block;
-    width: 0;
-    height: 100%;
-    border-radius: inherit;
-    background: var(--zoro-counter-accent);
-    transition: width 320ms ease;
-  }
-
-  @keyframes zoro-low-stock-pulse-{{ block.id }} {
-    0% {
-      box-shadow: 0 0 0 0 color-mix(in srgb, var(--zoro-counter-accent) 48%, transparent);
-      transform: scale(0.9);
-    }
-    75%, 100% {
-      box-shadow: 0 0 0 0.55rem transparent;
-      transform: scale(1);
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    #LowStockCounter-{{ block.id }} .zoro-low-stock-counter__pulse {
-      animation: none;
-    }
-
-    #LowStockCounter-{{ block.id }} .zoro-low-stock-counter__fill {
-      transition: none;
-    }
-  }
+  #LowStockCounter-{{ block.id }}{box-sizing:border-box;width:100%;margin-top:.75rem;padding:.75rem .875rem;border:1px solid color-mix(in srgb,var(--zoro-counter-accent) 22%,transparent);border-radius:.5rem;background:var(--zoro-counter-background);color:var(--zoro-counter-text);font-family:var(--font-body-family,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif);box-shadow:0 1px 0 rgba(0,0,0,.04)}
+  #LowStockCounter-{{ block.id }}[hidden]{display:none}
+  #LowStockCounter-{{ block.id }} .zoro-low-stock-counter__alert{display:flex;align-items:center;gap:.625rem;font-size:.875rem;font-weight:600;line-height:1.35}
+  #LowStockCounter-{{ block.id }} .zoro-low-stock-counter__pulse{flex:0 0 auto;width:.5rem;height:.5rem;border-radius:50%;background:var(--zoro-counter-accent);animation:zoro-low-stock-pulse-{{ block.id }} 1.6s ease-out infinite}
+  #LowStockCounter-{{ block.id }} .zoro-low-stock-counter__track{height:.25rem;margin-top:.625rem;overflow:hidden;border-radius:999px;background:var(--zoro-counter-track)}
+  #LowStockCounter-{{ block.id }} .zoro-low-stock-counter__fill{display:block;width:0;height:100%;border-radius:inherit;background:var(--zoro-counter-accent);transition:width 320ms ease}
+  @keyframes zoro-low-stock-pulse-{{ block.id }}{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--zoro-counter-accent) 48%,transparent);transform:scale(.9)}75%,100%{box-shadow:0 0 0 .55rem transparent;transform:scale(1)}}
+  @media (prefers-reduced-motion:reduce){#LowStockCounter-{{ block.id }} .zoro-low-stock-counter__pulse{animation:none}#LowStockCounter-{{ block.id }} .zoro-low-stock-counter__fill{transition:none}}
 </style>
 
 <script>
@@ -145,21 +62,17 @@
     const template = root.dataset.message || 'Hurry! Only [count] items left in stock!';
     const soldOutMessage = root.dataset.soldOutMessage || 'Sold out';
     const previewSimulation = root.dataset.previewSimulation === 'true';
-    const previewCount = Math.max(0, Number(root.dataset.previewCount) || 8);
-    const designMode = root.dataset.designMode === 'true';
-    const simulationStart = 8;
-    const simulationMinimum = 3;
+    const simulationStart = Math.max(0, Number(root.dataset.previewCount) || 8);
+    const simulationMinimum = Math.min(simulationStart, 3);
     const sessionKey = `zoro-low-stock:${root.dataset.productId}`;
     const variants = JSON.parse(variantSource.textContent || '[]');
     let simulationTimer;
 
-    const render = (count, available, forceVisible = false) => {
+    const render = (count, available) => {
       const inventory = Math.max(0, Number(count) || 0);
       const soldOut = !available;
-      root.hidden = !forceVisible && !soldOut && inventory > threshold;
-      message.textContent = soldOut
-        ? soldOutMessage
-        : template.split('[count]').join(String(inventory));
+      root.hidden = !soldOut && inventory > threshold;
+      message.textContent = soldOut ? soldOutMessage : template.split('[count]').join(String(inventory));
       progress.setAttribute('aria-valuenow', String(inventory));
       fill.style.width = soldOut ? '0%' : `${Math.min(100, (inventory / threshold) * 100)}%`;
     };
@@ -172,11 +85,8 @@
     const readSimulation = (variantId) => {
       try {
         const state = JSON.parse(sessionStorage.getItem(sessionKey) || '{}');
-        const entry = state[variantId];
-        const count = Number(typeof entry === 'object' ? entry?.count : entry);
-        return Number.isFinite(count) && count >= simulationMinimum && count <= simulationStart
-          ? count
-          : simulationStart;
+        const count = Number(state[variantId]);
+        return Number.isFinite(count) && count >= simulationMinimum && count <= simulationStart ? count : simulationStart;
       } catch (_error) {
         return simulationStart;
       }
@@ -185,32 +95,26 @@
     const saveSimulation = (variantId, count) => {
       try {
         const state = JSON.parse(sessionStorage.getItem(sessionKey) || '{}');
-        state[variantId] = { count };
+        state[variantId] = count;
         sessionStorage.setItem(sessionKey, JSON.stringify(state));
-      } catch (_error) {
-        // Continue without persistence when session storage is unavailable.
-      }
+      } catch (_error) {}
     };
 
     const simulate = (variant) => {
       stopSimulation();
       let count = readSimulation(String(variant.id));
-      saveSimulation(String(variant.id), count);
-      render(count, true);
-
+      render(count, variant.available);
       simulationTimer = window.setInterval(() => {
-        if (document.hidden) return;
         if (count <= simulationMinimum) return stopSimulation();
         count -= 1;
         saveSimulation(String(variant.id), count);
-        render(count, true);
+        render(count, variant.available);
       }, 12000);
     };
 
     const selectedVariantId = (event) => {
       const detailVariant = event?.detail?.variant || event?.detail;
       if (detailVariant?.id) return String(detailVariant.id);
-
       const section = root.closest('.shopify-section') || root.closest('section') || document;
       const form = section.querySelector('form[action*="/cart/add"]') || document.querySelector('form[action*="/cart/add"]');
       const input = form?.querySelector('[name="id"]');
@@ -220,25 +124,17 @@
     const update = (event) => {
       const variantId = selectedVariantId(event);
       const variant = variants.find((item) => String(item.id) === variantId) || variants[0];
-
       if (!variant) {
-        stopSimulation();
-        if (designMode) render(previewCount, true, true);
-        else root.hidden = true;
+        root.hidden = true;
         return;
       }
-
       if (previewSimulation) {
         stopSimulation();
-        render(previewCount, true, designMode);
+        render(simulationStart, true);
         return;
       }
-
       const inventory = Number(variant.inventory_quantity);
-      const hasFiniteInventory = Boolean(variant.inventory_management)
-        && variant.inventory_policy !== 'continue'
-        && Number.isFinite(inventory);
-
+      const hasFiniteInventory = Boolean(variant.inventory_management) && variant.inventory_policy !== 'continue' && Number.isFinite(inventory);
       if (hasFiniteInventory) {
         stopSimulation();
         render(inventory, variant.available);
@@ -247,19 +143,13 @@
       }
     };
 
-    ['variant:change', 'product:variant-change', 'variantChanged', 'shopify:variant:change']
-      .forEach((eventName) => document.addEventListener(eventName, update));
-
+    ['variant:change','product:variant-change','variantChanged','shopify:variant:change'].forEach((eventName) => document.addEventListener(eventName, update));
     document.addEventListener('change', (event) => {
-      if (event.target.closest('variant-selects, variant-radios, [data-variant-selector], form[action*="/cart/add"]')) {
-        window.setTimeout(() => update(event), 0);
-      }
+      if (event.target.closest('variant-selects, variant-radios, [data-variant-selector], form[action*="/cart/add"]')) window.setTimeout(() => update(event), 0);
     });
-
     document.addEventListener('shopify:section:unload', (event) => {
       if (event.target.contains(root)) stopSimulation();
     });
-
     update();
   })();
 </script>
@@ -269,64 +159,15 @@
   "name": "Low stock counter",
   "target": "section",
   "settings": [
-    {
-      "type": "number",
-      "id": "low_stock_threshold",
-      "label": "Show when stock is at or below",
-      "default": 10,
-      "info": "This controls visibility. It does not change the displayed stock count."
-    },
-    {
-      "type": "checkbox",
-      "id": "preview_simulation",
-      "label": "Use preview stock count",
-      "default": false,
-      "info": "Show a fixed test count instead of real inventory."
-    },
-    {
-      "type": "number",
-      "id": "preview_stock_count",
-      "label": "Preview stock count",
-      "default": 8,
-      "info": "Used only when Use preview stock count is enabled."
-    },
-    {
-      "type": "text",
-      "id": "alert_text",
-      "label": "Alert text",
-      "default": "Hurry! Only [count] items left in stock! 🔥",
-      "info": "Use [count] to display the active variant inventory."
-    },
-    {
-      "type": "text",
-      "id": "sold_out_text",
-      "label": "Sold out text",
-      "default": "This item is currently sold out."
-    },
-    {
-      "type": "color",
-      "id": "background_color",
-      "label": "Background color",
-      "default": "#fff4f4"
-    },
-    {
-      "type": "color",
-      "id": "text_color",
-      "label": "Text color",
-      "default": "#8e1f1f"
-    },
-    {
-      "type": "color",
-      "id": "warning_color",
-      "label": "Pulsing warning color",
-      "default": "#d72c0d"
-    },
-    {
-      "type": "color",
-      "id": "track_color",
-      "label": "Progress track color",
-      "default": "#f2c6c1"
-    }
+    {"type":"number","id":"low_stock_threshold","label":"Show when stock is at or below","default":10,"info":"This controls visibility. It does not change the displayed stock count."},
+    {"type":"checkbox","id":"preview_simulation","label":"Use preview stock count","default":false,"info":"Show a fixed test count instead of real inventory."},
+    {"type":"number","id":"preview_stock_count","label":"Preview stock count","default":8,"info":"Used only when Use preview stock count is enabled."},
+    {"type":"text","id":"alert_text","label":"Alert text","default":"Hurry! Only [count] items left in stock! 🔥","info":"Use [count] to display the active variant inventory."},
+    {"type":"text","id":"sold_out_text","label":"Sold out text","default":"This item is currently sold out."},
+    {"type":"color","id":"background_color","label":"Background color","default":"#fff4f4"},
+    {"type":"color","id":"text_color","label":"Text color","default":"#8e1f1f"},
+    {"type":"color","id":"warning_color","label":"Pulsing warning color","default":"#d72c0d"},
+    {"type":"color","id":"track_color","label":"Progress track color","default":"#f2c6c1"}
   ]
 }
 {% endschema %}
