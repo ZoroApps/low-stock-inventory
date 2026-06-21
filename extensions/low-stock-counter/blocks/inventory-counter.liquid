@@ -1,11 +1,64 @@
 {% liquid
   assign active_variant = product.selected_or_first_available_variant
   assign threshold = block.settings.low_stock_threshold | default: 10
+  assign target_eligible = true
+  assign target_value = block.settings.target_value | strip | downcase
+
+  if product == blank
+    assign target_eligible = false
+  elsif block.settings.target_rule == 'include_tag'
+    assign target_eligible = false
+    for product_tag in product.tags
+      assign normalized_tag = product_tag | strip | downcase
+      if normalized_tag == target_value
+        assign target_eligible = true
+        break
+      endif
+    endfor
+  elsif block.settings.target_rule == 'exclude_tag'
+    for product_tag in product.tags
+      assign normalized_tag = product_tag | strip | downcase
+      if normalized_tag == target_value
+        assign target_eligible = false
+        break
+      endif
+    endfor
+  elsif block.settings.target_rule == 'vendor'
+    assign normalized_vendor = product.vendor | strip | downcase
+    unless normalized_vendor == target_value
+      assign target_eligible = false
+    endunless
+  elsif block.settings.target_rule == 'product_type'
+    assign normalized_type = product.type | strip | downcase
+    unless normalized_type == target_value
+      assign target_eligible = false
+    endunless
+  endif
+
+  assign low_message = block.settings.alert_text
+  assign general_message = block.settings.general_low_stock_text
+  assign untracked_message = block.settings.untracked_text
+  assign sold_out_message = block.settings.sold_out_text
+  assign editor_message = block.settings.editor_help_text
+
+  if block.settings.use_storefront_language
+    assign low_message = 'inventory_counter.low_stock_exact' | t
+    assign general_message = 'inventory_counter.low_stock_general' | t
+    assign untracked_message = 'inventory_counter.untracked' | t
+    assign sold_out_message = 'inventory_counter.sold_out' | t
+    assign editor_message = 'inventory_counter.editor_help' | t
+  endif
 %}
 
 <div
   id="LowStockCounter-{{ block.id }}"
-  class="zoro-stock zoro-stock--{{ block.settings.layout }}"
+  class="
+    zoro-stock
+    zoro-stock--{{ block.settings.layout }}
+    zoro-stock--{{ block.settings.alignment }}
+    {% unless block.settings.show_on_mobile %}zoro-stock--hide-mobile{% endunless %}
+    {% unless block.settings.show_on_desktop %}zoro-stock--hide-desktop{% endunless %}
+  "
   style="
     --zoro-bg: {{ block.settings.background_color }};
     --zoro-text: {{ block.settings.text_color }};
@@ -13,6 +66,9 @@
     --zoro-track: {{ block.settings.track_color }};
     --zoro-radius: {{ block.settings.corner_radius }}px;
     --zoro-size: {{ block.settings.font_size }}px;
+    --zoro-mobile-size: {{ block.settings.mobile_font_size }}px;
+    --zoro-top-space: {{ block.settings.top_spacing }}px;
+    --zoro-progress-height: {{ block.settings.progress_height }}px;
   "
   data-zoro-stock
   data-product-id="{{ product.id }}"
@@ -20,11 +76,13 @@
   data-page-type="{{ request.page_type }}"
   data-design-mode="{{ request.design_mode }}"
   data-threshold="{{ threshold }}"
-  data-low-message="{{ block.settings.alert_text | escape }}"
-  data-general-message="{{ block.settings.general_low_stock_text | escape }}"
-  data-untracked-message="{{ block.settings.untracked_text | escape }}"
-  data-sold-out-message="{{ block.settings.sold_out_text | escape }}"
-  data-editor-message="{{ block.settings.editor_help_text | escape }}"
+  data-target-eligible="{{ target_eligible }}"
+  data-low-message="{{ low_message | escape }}"
+  data-general-message="{{ general_message | escape }}"
+  data-untracked-message="{{ untracked_message | escape }}"
+  data-sold-out-message="{{ sold_out_message | escape }}"
+  data-editor-message="{{ editor_message | escape }}"
+  data-target-message="{{ 'inventory_counter.target_help' | t | escape }}"
   data-count-display="{{ block.settings.count_display }}"
   data-show-untracked="{{ block.settings.show_untracked }}"
   data-show-sold-out="{{ block.settings.show_sold_out }}"
@@ -72,7 +130,7 @@
   #LowStockCounter-{{ block.id }} {
     box-sizing: border-box;
     width: 100%;
-    margin-top: .75rem;
+    margin-top: var(--zoro-top-space);
     color: var(--zoro-text);
     font-family: var(--font-body-family, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
     font-size: var(--zoro-size);
@@ -97,6 +155,8 @@
     font-weight: 600;
     line-height: 1.35;
   }
+  #LowStockCounter-{{ block.id }}.zoro-stock--center .zoro-stock__alert { justify-content: center; text-align: center; }
+  #LowStockCounter-{{ block.id }}.zoro-stock--right .zoro-stock__alert { justify-content: flex-end; text-align: right; }
   #LowStockCounter-{{ block.id }} .zoro-stock__pulse {
     flex: 0 0 auto;
     width: .5rem;
@@ -106,7 +166,7 @@
     animation: zoro-pulse-{{ block.id }} 1.6s ease-out infinite;
   }
   #LowStockCounter-{{ block.id }} .zoro-stock__track {
-    height: .25rem;
+    height: var(--zoro-progress-height);
     margin-top: .625rem;
     overflow: hidden;
     border-radius: 999px;
@@ -128,6 +188,13 @@
     #LowStockCounter-{{ block.id }} .zoro-stock__pulse { animation: none; }
     #LowStockCounter-{{ block.id }} .zoro-stock__fill { transition: none; }
   }
+  @media (max-width: 749px) {
+    #LowStockCounter-{{ block.id }} { font-size: var(--zoro-mobile-size); }
+    #LowStockCounter-{{ block.id }}.zoro-stock--hide-mobile { display: none !important; }
+  }
+  @media (min-width: 750px) {
+    #LowStockCounter-{{ block.id }}.zoro-stock--hide-desktop { display: none !important; }
+  }
 </style>
 
 <script>
@@ -145,6 +212,7 @@
     const previewEnabled = root.dataset.previewEnabled === 'true';
     const previewCount = Math.max(0, Number(root.dataset.previewCount) || 8);
     const showProgress = root.dataset.showProgress === 'true';
+    const targetEligible = root.dataset.targetEligible === 'true';
     const variants = JSON.parse(source?.textContent || '[]');
     let updateTimer;
 
@@ -179,6 +247,12 @@
     };
 
     const update = (event) => {
+      if (!targetEligible) {
+        if (designMode) show(root.dataset.targetMessage || 'This product does not match the targeting rule.');
+        else hide();
+        return;
+      }
+
       if (!variants.length) {
         if (designMode) show(root.dataset.editorMessage || 'Place this block on a product template.');
         else hide();
@@ -192,7 +266,6 @@
         show(copy, previewCount, true);
         return;
       }
-
       const id = selectedVariantId(event);
       const variant = variants.find((item) => String(item.id) === id) || variants[0];
       if (!variant) return hide();
@@ -252,162 +325,57 @@
   "name": "Low stock counter",
   "target": "section",
   "settings": [
-    {
-      "type": "header",
-      "content": "Inventory rules"
-    },
-    {
-      "type": "number",
-      "id": "low_stock_threshold",
-      "label": "Show at or below",
-      "default": 10,
-      "info": "The counter hides when tracked inventory is above this number."
-    },
-    {
-      "type": "select",
-      "id": "count_display",
-      "label": "Tracked inventory display",
-      "default": "exact",
-      "options": [
-        { "value": "exact", "label": "Show exact count" },
-        { "value": "general", "label": "Show general message" }
-      ]
-    },
-    {
-      "type": "checkbox",
-      "id": "show_untracked",
-      "label": "Show message for untracked inventory",
-      "default": true
-    },
-    {
-      "type": "checkbox",
-      "id": "show_sold_out",
-      "label": "Show sold-out message",
-      "default": true
-    },
-    {
-      "type": "header",
-      "content": "Messages"
-    },
-    {
-      "type": "text",
-      "id": "alert_text",
-      "label": "Exact-count message",
-      "default": "Hurry! Only [count] items left in stock!",
-      "info": "Use [count] for the selected variant's real inventory."
-    },
-    {
-      "type": "text",
-      "id": "general_low_stock_text",
-      "label": "General low-stock message",
-      "default": "Low stock - order soon!"
-    },
-    {
-      "type": "text",
-      "id": "untracked_text",
-      "label": "Untracked inventory message",
-      "default": "Popular right now"
-    },
-    {
-      "type": "text",
-      "id": "sold_out_text",
-      "label": "Sold-out message",
-      "default": "This item is currently sold out."
-    },
-    {
-      "type": "text",
-      "id": "editor_help_text",
-      "label": "Wrong-template editor message",
-      "default": "Open a product template and place this block below the price."
-    },
-    {
-      "type": "header",
-      "content": "Editor preview"
-    },
-    {
-      "type": "checkbox",
-      "id": "preview_simulation",
-      "label": "Use preview count in theme editor",
-      "default": false,
-      "info": "Preview only. Customers still see real Shopify inventory."
-    },
-    {
-      "type": "number",
-      "id": "preview_stock_count",
-      "label": "Preview count",
-      "default": 8
-    },
-    {
-      "type": "header",
-      "content": "Appearance"
-    },
-    {
-      "type": "select",
-      "id": "layout",
-      "label": "Layout",
-      "default": "card",
-      "options": [
-        { "value": "card", "label": "Card" },
-        { "value": "compact", "label": "Compact" },
-        { "value": "text", "label": "Text only" }
-      ]
-    },
-    {
-      "type": "checkbox",
-      "id": "show_progress",
-      "label": "Show progress bar",
-      "default": true
-    },
-    {
-      "type": "checkbox",
-      "id": "show_pulse",
-      "label": "Show pulsing indicator",
-      "default": true
-    },
-    {
-      "type": "range",
-      "id": "font_size",
-      "min": 12,
-      "max": 20,
-      "step": 1,
-      "unit": "px",
-      "label": "Font size",
-      "default": 14
-    },
-    {
-      "type": "range",
-      "id": "corner_radius",
-      "min": 0,
-      "max": 20,
-      "step": 1,
-      "unit": "px",
-      "label": "Corner radius",
-      "default": 8
-    },
-    {
-      "type": "color",
-      "id": "background_color",
-      "label": "Background",
-      "default": "#fff4f4"
-    },
-    {
-      "type": "color",
-      "id": "text_color",
-      "label": "Text",
-      "default": "#8e1f1f"
-    },
-    {
-      "type": "color",
-      "id": "warning_color",
-      "label": "Indicator and progress",
-      "default": "#d72c0d"
-    },
-    {
-      "type": "color",
-      "id": "track_color",
-      "label": "Progress track",
-      "default": "#f2c6c1"
-    }
+    { "type": "header", "content": "Inventory rules" },
+    { "type": "number", "id": "low_stock_threshold", "label": "Show at or below", "default": 10, "info": "The counter hides when tracked inventory is above this number." },
+    { "type": "select", "id": "count_display", "label": "Tracked inventory display", "default": "exact", "options": [
+      { "value": "exact", "label": "Show exact count" },
+      { "value": "general", "label": "Show general message" }
+    ] },
+    { "type": "checkbox", "id": "show_untracked", "label": "Show message for untracked inventory", "default": true },
+    { "type": "checkbox", "id": "show_sold_out", "label": "Show sold-out message", "default": true },
+    { "type": "header", "content": "Product targeting" },
+    { "type": "select", "id": "target_rule", "label": "Display on", "default": "all", "options": [
+      { "value": "all", "label": "All products" },
+      { "value": "include_tag", "label": "Products with tag" },
+      { "value": "exclude_tag", "label": "Products without tag" },
+      { "value": "vendor", "label": "Products from vendor" },
+      { "value": "product_type", "label": "Products of type" }
+    ] },
+    { "type": "text", "id": "target_value", "label": "Tag, vendor, or product type", "info": "Required unless Display on is All products. Matching is not case-sensitive." },
+    { "type": "header", "content": "Messages" },
+    { "type": "text", "id": "alert_text", "label": "Exact-count message", "default": "Hurry! Only [count] items left in stock!", "info": "Use [count] for the selected variant's real inventory." },
+    { "type": "text", "id": "general_low_stock_text", "label": "General low-stock message", "default": "Low stock - order soon!" },
+    { "type": "text", "id": "untracked_text", "label": "Untracked inventory message", "default": "Popular right now" },
+    { "type": "text", "id": "sold_out_text", "label": "Sold-out message", "default": "This item is currently sold out." },
+    { "type": "text", "id": "editor_help_text", "label": "Wrong-template editor message", "default": "Open a product template and place this block below the price." },
+    { "type": "checkbox", "id": "use_storefront_language", "label": "Use storefront language", "default": false, "info": "Uses built-in translations instead of the custom messages above." },
+    { "type": "header", "content": "Editor preview" },
+    { "type": "checkbox", "id": "preview_simulation", "label": "Use preview count in theme editor", "default": false, "info": "Preview only. Customers still see real Shopify inventory." },
+    { "type": "number", "id": "preview_stock_count", "label": "Preview count", "default": 8 },
+    { "type": "header", "content": "Appearance" },
+    { "type": "select", "id": "layout", "label": "Layout", "default": "card", "options": [
+      { "value": "card", "label": "Card" },
+      { "value": "compact", "label": "Compact" },
+      { "value": "text", "label": "Text only" }
+    ] },
+    { "type": "checkbox", "id": "show_progress", "label": "Show progress bar", "default": true },
+    { "type": "checkbox", "id": "show_pulse", "label": "Show pulsing indicator", "default": true },
+    { "type": "select", "id": "alignment", "label": "Text alignment", "default": "left", "options": [
+      { "value": "left", "label": "Left" },
+      { "value": "center", "label": "Center" },
+      { "value": "right", "label": "Right" }
+    ] },
+    { "type": "checkbox", "id": "show_on_mobile", "label": "Show on mobile", "default": true },
+    { "type": "checkbox", "id": "show_on_desktop", "label": "Show on desktop", "default": true },
+    { "type": "range", "id": "font_size", "min": 12, "max": 20, "step": 1, "unit": "px", "label": "Font size", "default": 14 },
+    { "type": "range", "id": "mobile_font_size", "min": 12, "max": 20, "step": 1, "unit": "px", "label": "Mobile font size", "default": 14 },
+    { "type": "range", "id": "corner_radius", "min": 0, "max": 20, "step": 1, "unit": "px", "label": "Corner radius", "default": 8 },
+    { "type": "range", "id": "top_spacing", "min": 0, "max": 40, "step": 2, "unit": "px", "label": "Space above", "default": 12 },
+    { "type": "range", "id": "progress_height", "min": 2, "max": 10, "step": 1, "unit": "px", "label": "Progress bar height", "default": 4 },
+    { "type": "color", "id": "background_color", "label": "Background", "default": "#fff4f4" },
+    { "type": "color", "id": "text_color", "label": "Text", "default": "#8e1f1f" },
+    { "type": "color", "id": "warning_color", "label": "Indicator and progress", "default": "#d72c0d" },
+    { "type": "color", "id": "track_color", "label": "Progress track", "default": "#f2c6c1" }
   ]
 }
 {% endschema %}
