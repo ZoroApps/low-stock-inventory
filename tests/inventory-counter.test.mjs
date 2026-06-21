@@ -17,6 +17,7 @@ test('schema is valid JSON with unique setting IDs', () => {
   assert.equal(new Set(ids).size, ids.length);
   assert.ok(ids.includes('alert_text'));
   assert.ok(ids.includes('message_language'));
+  assert.ok(ids.includes('display_mode'));
   assert.ok(!ids.includes('preview_simulation'));
   assert.ok(!ids.includes('preview_stock_count'));
 });
@@ -51,6 +52,13 @@ test('language selector exposes automatic and explicit languages', () => {
   for (const value of ['auto', 'en', 'es', 'fr', 'de', 'custom']) {
     assert.match(block, new RegExp(`"value":\s*"${value}"`));
   }
+});
+
+test('visibility supports always-on real inventory and low-stock-only modes', () => {
+  assert.match(block, /data-display-mode/);
+  assert.match(block, /displayMode === 'low_only'/);
+  assert.match(block, /"value":\s*"always"/);
+  assert.match(block, /"value":\s*"low_only"/);
 });
 
 test('all locale files contain required storefront keys', () => {
