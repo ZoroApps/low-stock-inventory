@@ -1,0 +1,10 @@
+{
+  "inventory_counter": {
+    "low_stock_exact": "Dépêchez-vous, il ne reste que [count] articles.",
+    "low_stock_general": "Stock faible, commandez bientôt.",
+    "untracked": "Très populaire en ce moment",
+    "sold_out": "Cet article est actuellement épuisé.",
+    "editor_help": "Ouvrez un modèle de produit et placez ce bloc sous le prix.",
+    "target_help": "Ce produit ne correspond pas à la règle de ciblage du bloc."
+  }
+}
