@@ -16,8 +16,9 @@ test('schema is valid JSON with unique setting IDs', () => {
   const ids = schema.settings.flatMap((setting) => setting.id ? [setting.id] : []);
   assert.equal(new Set(ids).size, ids.length);
   assert.ok(ids.includes('alert_text'));
-  assert.ok(ids.includes('preview_simulation'));
-  assert.ok(ids.includes('preview_stock_count'));
+  assert.ok(ids.includes('message_language'));
+  assert.ok(!ids.includes('preview_simulation'));
+  assert.ok(!ids.includes('preview_stock_count'));
 });
 
 test('embedded JavaScript has valid syntax after Liquid ID replacement', () => {
@@ -42,7 +43,13 @@ test('targeting and responsive controls are present', () => {
     'show_on_desktop',
     'mobile_font_size',
   ]) {
-    assert.match(block, new RegExp(`"id":\\s*"${id}"`));
+    assert.match(block, new RegExp(`"id":\s*"${id}"`));
+  }
+});
+
+test('language selector exposes automatic and explicit languages', () => {
+  for (const value of ['auto', 'en', 'es', 'fr', 'de', 'custom']) {
+    assert.match(block, new RegExp(`"value":\s*"${value}"`));
   }
 });
 
