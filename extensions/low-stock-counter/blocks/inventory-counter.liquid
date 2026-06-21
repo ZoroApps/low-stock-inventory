@@ -5,50 +5,63 @@
 
 <div
   id="LowStockCounter-{{ block.id }}"
-  class="zoro-low-stock-counter"
+  class="zoro-stock zoro-stock--{{ block.settings.layout }}"
   style="
-    --zoro-counter-background: {{ block.settings.background_color }};
-    --zoro-counter-text: {{ block.settings.text_color }};
-    --zoro-counter-accent: {{ block.settings.warning_color }};
-    --zoro-counter-track: {{ block.settings.track_color }};
+    --zoro-bg: {{ block.settings.background_color }};
+    --zoro-text: {{ block.settings.text_color }};
+    --zoro-accent: {{ block.settings.warning_color }};
+    --zoro-track: {{ block.settings.track_color }};
+    --zoro-radius: {{ block.settings.corner_radius }}px;
+    --zoro-size: {{ block.settings.font_size }}px;
   "
-  data-low-stock-counter
+  data-zoro-stock
   data-product-id="{{ product.id }}"
-  data-initial-variant-id="{{ active_variant.id }}"
+  data-variant-id="{{ active_variant.id }}"
+  data-page-type="{{ request.page_type }}"
+  data-design-mode="{{ request.design_mode }}"
   data-threshold="{{ threshold }}"
-  data-message="{{ block.settings.alert_text | escape }}"
+  data-low-message="{{ block.settings.alert_text | escape }}"
+  data-general-message="{{ block.settings.general_low_stock_text | escape }}"
+  data-untracked-message="{{ block.settings.untracked_text | escape }}"
   data-sold-out-message="{{ block.settings.sold_out_text | escape }}"
-  data-preview-simulation="{{ block.settings.preview_simulation }}"
+  data-editor-message="{{ block.settings.editor_help_text | escape }}"
+  data-count-display="{{ block.settings.count_display }}"
+  data-show-untracked="{{ block.settings.show_untracked }}"
+  data-show-sold-out="{{ block.settings.show_sold_out }}"
+  data-show-progress="{{ block.settings.show_progress }}"
+  data-preview-enabled="{{ block.settings.preview_simulation }}"
   data-preview-count="{{ block.settings.preview_stock_count }}"
   hidden
   {{ block.shopify_attributes }}
 >
-  <div class="zoro-low-stock-counter__alert" role="status" aria-live="polite">
-    <span class="zoro-low-stock-counter__pulse" aria-hidden="true"></span>
-    <span data-counter-message></span>
+  <div class="zoro-stock__alert" role="status" aria-live="polite" aria-atomic="true">
+    {% if block.settings.show_pulse %}
+      <span class="zoro-stock__pulse" aria-hidden="true"></span>
+    {% endif %}
+    <span data-zoro-message></span>
   </div>
 
   <div
-    class="zoro-low-stock-counter__track"
-    data-counter-progress
+    class="zoro-stock__track"
+    data-zoro-progress
     role="progressbar"
     aria-label="Stock remaining"
     aria-valuemin="0"
     aria-valuemax="{{ threshold }}"
     aria-valuenow="0"
   >
-    <span class="zoro-low-stock-counter__fill" data-counter-fill></span>
+    <span class="zoro-stock__fill" data-zoro-fill></span>
   </div>
 
-  <script type="application/json" data-counter-variants>
+  <script type="application/json" data-zoro-variants>
     [
       {% for variant in product.variants %}
         {
           "id": {{ variant.id | json }},
           "available": {{ variant.available | json }},
-          "inventory_quantity": {{ variant.inventory_quantity | json }},
-          "inventory_management": {{ variant.inventory_management | json }},
-          "inventory_policy": {{ variant.inventory_policy | json }}
+          "quantity": {{ variant.inventory_quantity | json }},
+          "management": {{ variant.inventory_management | json }},
+          "policy": {{ variant.inventory_policy | json }}
         }{% unless forloop.last %},{% endunless %}
       {% endfor %}
     ]
@@ -59,197 +72,175 @@
   #LowStockCounter-{{ block.id }} {
     box-sizing: border-box;
     width: 100%;
-    margin-top: 0.75rem;
-    padding: 0.75rem 0.875rem;
-    border: 1px solid color-mix(in srgb, var(--zoro-counter-accent) 22%, transparent);
-    border-radius: 0.5rem;
-    background: var(--zoro-counter-background);
-    color: var(--zoro-counter-text);
+    margin-top: .75rem;
+    color: var(--zoro-text);
     font-family: var(--font-body-family, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
-    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+    font-size: var(--zoro-size);
   }
-
-  #LowStockCounter-{{ block.id }}[hidden] {
-    display: none;
+  #LowStockCounter-{{ block.id }}[hidden] { display: none; }
+  #LowStockCounter-{{ block.id }}.zoro-stock--card {
+    padding: .75rem .875rem;
+    border: 1px solid color-mix(in srgb, var(--zoro-accent) 22%, transparent);
+    border-radius: var(--zoro-radius);
+    background: var(--zoro-bg);
+    box-shadow: 0 1px 0 rgba(0, 0, 0, .04);
   }
-
-  #LowStockCounter-{{ block.id }} .zoro-low-stock-counter__alert {
+  #LowStockCounter-{{ block.id }}.zoro-stock--compact {
+    padding: .5rem .625rem;
+    border-radius: var(--zoro-radius);
+    background: var(--zoro-bg);
+  }
+  #LowStockCounter-{{ block.id }} .zoro-stock__alert {
     display: flex;
     align-items: center;
-    gap: 0.625rem;
-    font-size: 0.875rem;
+    gap: .625rem;
     font-weight: 600;
     line-height: 1.35;
   }
-
-  #LowStockCounter-{{ block.id }} .zoro-low-stock-counter__pulse {
+  #LowStockCounter-{{ block.id }} .zoro-stock__pulse {
     flex: 0 0 auto;
-    width: 0.5rem;
-    height: 0.5rem;
+    width: .5rem;
+    height: .5rem;
     border-radius: 50%;
-    background: var(--zoro-counter-accent);
-    animation: zoro-low-stock-pulse-{{ block.id }} 1.6s ease-out infinite;
+    background: var(--zoro-accent);
+    animation: zoro-pulse-{{ block.id }} 1.6s ease-out infinite;
   }
-
-  #LowStockCounter-{{ block.id }} .zoro-low-stock-counter__track {
-    height: 0.25rem;
-    margin-top: 0.625rem;
+  #LowStockCounter-{{ block.id }} .zoro-stock__track {
+    height: .25rem;
+    margin-top: .625rem;
     overflow: hidden;
     border-radius: 999px;
-    background: var(--zoro-counter-track);
+    background: var(--zoro-track);
   }
-
-  #LowStockCounter-{{ block.id }} .zoro-low-stock-counter__fill {
+  #LowStockCounter-{{ block.id }} .zoro-stock__fill {
     display: block;
     width: 0;
     height: 100%;
     border-radius: inherit;
-    background: var(--zoro-counter-accent);
+    background: var(--zoro-accent);
     transition: width 320ms ease;
   }
-
-  @keyframes zoro-low-stock-pulse-{{ block.id }} {
-    0% {
-      box-shadow: 0 0 0 0 color-mix(in srgb, var(--zoro-counter-accent) 48%, transparent);
-      transform: scale(0.9);
-    }
-    75%, 100% {
-      box-shadow: 0 0 0 0.55rem transparent;
-      transform: scale(1);
-    }
+  @keyframes zoro-pulse-{{ block.id }} {
+    0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--zoro-accent) 48%, transparent); transform: scale(.9); }
+    75%, 100% { box-shadow: 0 0 0 .55rem transparent; transform: scale(1); }
   }
-
   @media (prefers-reduced-motion: reduce) {
-    #LowStockCounter-{{ block.id }} .zoro-low-stock-counter__pulse {
-      animation: none;
-    }
-
-    #LowStockCounter-{{ block.id }} .zoro-low-stock-counter__fill {
-      transition: none;
-    }
+    #LowStockCounter-{{ block.id }} .zoro-stock__pulse { animation: none; }
+    #LowStockCounter-{{ block.id }} .zoro-stock__fill { transition: none; }
   }
 </style>
 
 <script>
   (() => {
     const root = document.getElementById('LowStockCounter-{{ block.id }}');
-    if (!root || root.dataset.initialized === 'true') return;
-    root.dataset.initialized = 'true';
+    if (!root || root.dataset.ready === 'true') return;
+    root.dataset.ready = 'true';
 
-    const message = root.querySelector('[data-counter-message]');
-    const progress = root.querySelector('[data-counter-progress]');
-    const fill = root.querySelector('[data-counter-fill]');
-    const variantSource = root.querySelector('[data-counter-variants]');
+    const message = root.querySelector('[data-zoro-message]');
+    const progress = root.querySelector('[data-zoro-progress]');
+    const fill = root.querySelector('[data-zoro-fill]');
+    const source = root.querySelector('[data-zoro-variants]');
     const threshold = Math.max(1, Number(root.dataset.threshold) || 10);
-    const template = root.dataset.message || 'Hurry! Only [count] items left in stock!';
-    const soldOutMessage = root.dataset.soldOutMessage || 'Sold out';
-    const previewSimulation = root.dataset.previewSimulation === 'true';
-    const simulationStart = Math.max(0, Number(root.dataset.previewCount) || 8);
-    const simulationMinimum = Math.min(simulationStart, 3);
-    const sessionKey = `zoro-low-stock:${root.dataset.productId}`;
-    const variants = JSON.parse(variantSource.textContent || '[]');
-    let simulationTimer;
+    const designMode = root.dataset.designMode === 'true';
+    const previewEnabled = root.dataset.previewEnabled === 'true';
+    const previewCount = Math.max(0, Number(root.dataset.previewCount) || 8);
+    const showProgress = root.dataset.showProgress === 'true';
+    const variants = JSON.parse(source?.textContent || '[]');
+    let updateTimer;
 
-    const render = (count, available) => {
-      const inventory = Math.max(0, Number(count) || 0);
-      const soldOut = !available;
-      root.hidden = !soldOut && inventory > threshold;
-      message.textContent = soldOut
-        ? soldOutMessage
-        : template.split('[count]').join(String(inventory));
-      progress.setAttribute('aria-valuenow', String(inventory));
-      fill.style.width = soldOut ? '0%' : `${Math.min(100, (inventory / threshold) * 100)}%`;
+    const text = (template, count) =>
+      (template || '').split('[count]').join(String(count));
+
+    const show = (copy, count = 0, progressVisible = false) => {
+      message.textContent = copy;
+      root.hidden = false;
+      progress.hidden = !showProgress || !progressVisible;
+      progress.setAttribute('aria-valuenow', String(count));
+      fill.style.width = `${Math.min(100, Math.max(0, count / threshold * 100))}%`;
     };
 
-    const stopSimulation = () => {
-      if (simulationTimer) window.clearInterval(simulationTimer);
-      simulationTimer = undefined;
-    };
-
-    const readSimulation = (variantId) => {
-      try {
-        const state = JSON.parse(sessionStorage.getItem(sessionKey) || '{}');
-        const count = Number(state[variantId]);
-        return Number.isFinite(count) && count >= simulationMinimum && count <= simulationStart
-          ? count
-          : simulationStart;
-      } catch (_error) {
-        return simulationStart;
-      }
-    };
-
-    const saveSimulation = (variantId, count) => {
-      try {
-        const state = JSON.parse(sessionStorage.getItem(sessionKey) || '{}');
-        state[variantId] = count;
-        sessionStorage.setItem(sessionKey, JSON.stringify(state));
-      } catch (_error) {
-        // Continue without persistence when session storage is unavailable.
-      }
-    };
-
-    const simulate = (variant) => {
-      stopSimulation();
-      let count = readSimulation(String(variant.id));
-      render(count, variant.available);
-
-      simulationTimer = window.setInterval(() => {
-        if (count <= simulationMinimum) return stopSimulation();
-        count -= 1;
-        saveSimulation(String(variant.id), count);
-        render(count, variant.available);
-      }, 12000);
+    const hide = () => {
+      root.hidden = true;
     };
 
     const selectedVariantId = (event) => {
-      const detailVariant = event?.detail?.variant || event?.detail;
-      if (detailVariant?.id) return String(detailVariant.id);
+      const detail = event?.detail?.variant || event?.detail;
+      if (detail?.id) return String(detail.id);
 
       const section = root.closest('.shopify-section') || root.closest('section') || document;
-      const form = section.querySelector('form[action*="/cart/add"]') || document.querySelector('form[action*="/cart/add"]');
+      const form = section.querySelector('form[action*="/cart/add"]')
+        || document.querySelector('form[action*="/cart/add"]');
       const input = form?.querySelector('[name="id"]');
-      return String(input?.value || new URLSearchParams(location.search).get('variant') || root.dataset.initialVariantId);
+      return String(
+        input?.value
+        || new URLSearchParams(location.search).get('variant')
+        || root.dataset.variantId
+      );
     };
 
     const update = (event) => {
-      const variantId = selectedVariantId(event);
-      const variant = variants.find((item) => String(item.id) === variantId) || variants[0];
-
-      if (!variant) {
-        root.hidden = true;
+      if (!variants.length) {
+        if (designMode) show(root.dataset.editorMessage || 'Place this block on a product template.');
+        else hide();
         return;
       }
 
-      if (previewSimulation) {
-        stopSimulation();
-        render(simulationStart, true);
+      if (designMode && previewEnabled) {
+        const copy = root.dataset.countDisplay === 'exact'
+          ? text(root.dataset.lowMessage, previewCount)
+          : root.dataset.generalMessage;
+        show(copy, previewCount, true);
         return;
       }
 
-      const inventory = Number(variant.inventory_quantity);
-      const hasFiniteInventory = Boolean(variant.inventory_management)
-        && variant.inventory_policy !== 'continue'
-        && Number.isFinite(inventory);
+      const id = selectedVariantId(event);
+      const variant = variants.find((item) => String(item.id) === id) || variants[0];
+      if (!variant) return hide();
 
-      if (hasFiniteInventory) {
-        stopSimulation();
-        render(inventory, variant.available);
-      } else {
-        simulate(variant);
+      if (!variant.available) {
+        if (root.dataset.showSoldOut === 'true') show(root.dataset.soldOutMessage);
+        else hide();
+        return;
       }
+
+      const quantity = Number(variant.quantity);
+      const tracked = Boolean(variant.management)
+        && variant.policy !== 'continue'
+        && Number.isFinite(quantity);
+
+      if (!tracked) {
+        if (root.dataset.showUntracked === 'true') show(root.dataset.untrackedMessage);
+        else hide();
+        return;
+      }
+
+      if (quantity > threshold) return hide();
+      const copy = root.dataset.countDisplay === 'exact'
+        ? text(root.dataset.lowMessage, quantity)
+        : root.dataset.generalMessage;
+      show(copy, quantity, true);
+    };
+
+    const scheduleUpdate = (event) => {
+      window.clearTimeout(updateTimer);
+      updateTimer = window.setTimeout(() => update(event), 40);
     };
 
     ['variant:change', 'product:variant-change', 'variantChanged', 'shopify:variant:change']
-      .forEach((eventName) => document.addEventListener(eventName, update));
+      .forEach((name) => document.addEventListener(name, scheduleUpdate));
 
     document.addEventListener('change', (event) => {
-      if (event.target.closest('variant-selects, variant-radios, [data-variant-selector], form[action*="/cart/add"]')) {
-        window.setTimeout(() => update(event), 0);
-      }
+      if (event.target.closest(
+        'variant-selects, variant-radios, [data-variant-selector], form[action*="/cart/add"]'
+      )) scheduleUpdate(event);
     });
-
+    window.addEventListener('popstate', scheduleUpdate);
+    document.addEventListener('shopify:section:load', scheduleUpdate);
+    document.addEventListener('shopify:block:select', (event) => {
+      if (event.target.contains(root) || event.target === root) update(event);
+    });
     document.addEventListener('shopify:section:unload', (event) => {
-      if (event.target.contains(root)) stopSimulation();
+      if (event.target.contains(root)) window.clearTimeout(updateTimer);
     });
 
     update();
@@ -262,61 +253,159 @@
   "target": "section",
   "settings": [
     {
+      "type": "header",
+      "content": "Inventory rules"
+    },
+    {
       "type": "number",
       "id": "low_stock_threshold",
-      "label": "Show when stock is at or below",
+      "label": "Show at or below",
       "default": 10,
-      "info": "This controls visibility. It does not change the displayed stock count."
+      "info": "The counter hides when tracked inventory is above this number."
+    },
+    {
+      "type": "select",
+      "id": "count_display",
+      "label": "Tracked inventory display",
+      "default": "exact",
+      "options": [
+        { "value": "exact", "label": "Show exact count" },
+        { "value": "general", "label": "Show general message" }
+      ]
     },
     {
       "type": "checkbox",
-      "id": "preview_simulation",
-      "label": "Use preview stock count",
-      "default": false,
-      "info": "Show a fixed test count instead of real inventory."
+      "id": "show_untracked",
+      "label": "Show message for untracked inventory",
+      "default": true
     },
     {
-      "type": "number",
-      "id": "preview_stock_count",
-      "label": "Preview stock count",
-      "default": 8,
-      "info": "Used only when Use preview stock count is enabled."
+      "type": "checkbox",
+      "id": "show_sold_out",
+      "label": "Show sold-out message",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Messages"
     },
     {
       "type": "text",
       "id": "alert_text",
-      "label": "Alert text",
-      "default": "Hurry! Only [count] items left in stock! 🔥",
-      "info": "Use [count] to display the active variant inventory."
+      "label": "Exact-count message",
+      "default": "Hurry! Only [count] items left in stock!",
+      "info": "Use [count] for the selected variant's real inventory."
+    },
+    {
+      "type": "text",
+      "id": "general_low_stock_text",
+      "label": "General low-stock message",
+      "default": "Low stock - order soon!"
+    },
+    {
+      "type": "text",
+      "id": "untracked_text",
+      "label": "Untracked inventory message",
+      "default": "Popular right now"
     },
     {
       "type": "text",
       "id": "sold_out_text",
-      "label": "Sold out text",
+      "label": "Sold-out message",
       "default": "This item is currently sold out."
+    },
+    {
+      "type": "text",
+      "id": "editor_help_text",
+      "label": "Wrong-template editor message",
+      "default": "Open a product template and place this block below the price."
+    },
+    {
+      "type": "header",
+      "content": "Editor preview"
+    },
+    {
+      "type": "checkbox",
+      "id": "preview_simulation",
+      "label": "Use preview count in theme editor",
+      "default": false,
+      "info": "Preview only. Customers still see real Shopify inventory."
+    },
+    {
+      "type": "number",
+      "id": "preview_stock_count",
+      "label": "Preview count",
+      "default": 8
+    },
+    {
+      "type": "header",
+      "content": "Appearance"
+    },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "Layout",
+      "default": "card",
+      "options": [
+        { "value": "card", "label": "Card" },
+        { "value": "compact", "label": "Compact" },
+        { "value": "text", "label": "Text only" }
+      ]
+    },
+    {
+      "type": "checkbox",
+      "id": "show_progress",
+      "label": "Show progress bar",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_pulse",
+      "label": "Show pulsing indicator",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "font_size",
+      "min": 12,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "label": "Font size",
+      "default": 14
+    },
+    {
+      "type": "range",
+      "id": "corner_radius",
+      "min": 0,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "label": "Corner radius",
+      "default": 8
     },
     {
       "type": "color",
       "id": "background_color",
-      "label": "Background color",
+      "label": "Background",
       "default": "#fff4f4"
     },
     {
       "type": "color",
       "id": "text_color",
-      "label": "Text color",
+      "label": "Text",
       "default": "#8e1f1f"
     },
     {
       "type": "color",
       "id": "warning_color",
-      "label": "Pulsing warning color",
+      "label": "Indicator and progress",
       "default": "#d72c0d"
     },
     {
       "type": "color",
       "id": "track_color",
-      "label": "Progress track color",
+      "label": "Progress track",
       "default": "#f2c6c1"
     }
   ]
