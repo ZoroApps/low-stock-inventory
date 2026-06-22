@@ -2,10 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import test from 'node:test';
 
-const blockPath = new URL(
-  '../extensions/low-stock-counter/blocks/inventory-counter.liquid',
-  import.meta.url,
-);
+const blockPath = new URL('../extensions/low-stock-counter/blocks/inventory-counter.liquid', import.meta.url);
 const localesPath = new URL('../extensions/low-stock-counter/locales/', import.meta.url);
 const block = readFileSync(blockPath, 'utf8');
 
@@ -15,9 +12,7 @@ test('schema is valid JSON with unique setting IDs', () => {
   const schema = JSON.parse(match[1]);
   const ids = schema.settings.flatMap((setting) => setting.id ? [setting.id] : []);
   assert.equal(new Set(ids).size, ids.length);
-  assert.ok(ids.includes('alert_text'));
-  assert.ok(ids.includes('message_language'));
-  assert.ok(ids.includes('display_mode'));
+  for (const id of ['alert_text', 'message_language', 'display_mode', 'show_sold_out_badge', 'companion_product']) assert.ok(ids.includes(id));
   assert.ok(!ids.includes('preview_simulation'));
   assert.ok(!ids.includes('preview_stock_count'));
 });
@@ -29,29 +24,29 @@ test('embedded JavaScript has valid syntax after Liquid ID replacement', () => {
   assert.doesNotThrow(() => new Function(script));
 });
 
-test('counter remains backendless and uses real Shopify inventory', () => {
+test('counter remains backendless and uses Shopify inventory and cart APIs', () => {
   assert.match(block, /variant\.inventory_quantity/);
   assert.match(block, /variant\.inventory_management/);
-  assert.doesNotMatch(block, /\bfetch\s*\(/);
+  assert.match(block, /fetch\(`\$\{base\}cart\/add\.js`/);
+  assert.match(block, /items:\s*\[\s*\{\s*id:\s*currentId,\s*quantity:\s*1\s*\},\s*\{\s*id:\s*companionId,\s*quantity:\s*1\s*\}/);
+  assert.doesNotMatch(block, /https?:\/\/[^'"]+/);
   assert.doesNotMatch(block, /XMLHttpRequest|WebSocket|sessionStorage|localStorage/);
 });
 
+test('sold-out badge and optional companion offer are present', () => {
+  assert.match(block, /data-zoro-sold-out-badge/);
+  assert.match(block, /data-zoro-add-both/);
+  assert.match(block, /"type":\s*"product",\s*"id":\s*"companion_product"/);
+});
+
 test('targeting and responsive controls are present', () => {
-  for (const id of [
-    'target_rule',
-    'target_value',
-    'show_on_mobile',
-    'show_on_desktop',
-    'mobile_font_size',
-  ]) {
-    assert.match(block, new RegExp(`"id":\s*"${id}"`));
+  for (const id of ['target_rule', 'target_value', 'show_on_mobile', 'show_on_desktop', 'mobile_font_size']) {
+    assert.match(block, new RegExp(`"id":\\s*"${id}"`));
   }
 });
 
 test('language selector exposes automatic and explicit languages', () => {
-  for (const value of ['auto', 'en', 'es', 'fr', 'de', 'custom']) {
-    assert.match(block, new RegExp(`"value":\s*"${value}"`));
-  }
+  for (const value of ['auto', 'en', 'es', 'fr', 'de', 'custom']) assert.match(block, new RegExp(`"value":\\s*"${value}"`));
 });
 
 test('visibility supports always-on real inventory and low-stock-only modes', () => {
@@ -62,19 +57,9 @@ test('visibility supports always-on real inventory and low-stock-only modes', ()
 });
 
 test('all locale files contain required storefront keys', () => {
-  const required = [
-    'low_stock_exact',
-    'low_stock_general',
-    'untracked',
-    'sold_out',
-    'editor_help',
-    'target_help',
-  ];
-
+  const required = ['low_stock_exact', 'low_stock_general', 'untracked', 'sold_out', 'editor_help', 'target_help'];
   for (const file of readdirSync(localesPath).filter((name) => name.endsWith('.json'))) {
     const locale = JSON.parse(readFileSync(new URL(file, localesPath), 'utf8'));
-    for (const key of required) {
-      assert.equal(typeof locale.inventory_counter?.[key], 'string', `${file}: ${key}`);
-    }
+    for (const key of required) assert.equal(typeof locale.inventory_counter?.[key], 'string', `${file}: ${key}`);
   }
 });
