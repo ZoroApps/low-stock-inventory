@@ -40,6 +40,12 @@
   assign untracked_message = block.settings.untracked_text
   assign sold_out_message = block.settings.sold_out_text
   assign editor_message = block.settings.editor_help_text
+  assign companion_product = block.settings.companion_product
+  assign has_companion = false
+
+  if companion_product != blank and companion_product.id != product.id
+    assign has_companion = true
+  endif
 
   case block.settings.message_language
     when 'auto'
@@ -77,8 +83,28 @@
 
 <div
   id="LowStockCounter-{{ block.id }}"
-  class="zoro-stock zoro-stock--{{ block.settings.layout }} zoro-stock--{{ block.settings.alignment }} {% unless block.settings.show_on_mobile %}zoro-stock--hide-mobile{% endunless %} {% unless block.settings.show_on_desktop %}zoro-stock--hide-desktop{% endunless %}"
-  style="--zoro-bg:{{ block.settings.background_color }};--zoro-text:{{ block.settings.text_color }};--zoro-accent:{{ block.settings.warning_color }};--zoro-track:{{ block.settings.track_color }};--zoro-radius:{{ block.settings.corner_radius }}px;--zoro-size:{{ block.settings.font_size }}px;--zoro-mobile-size:{{ block.settings.mobile_font_size }}px;--zoro-top-space:{{ block.settings.top_spacing }}px;--zoro-progress-height:{{ block.settings.progress_height }}px;"
+  class="
+    zoro-stock
+    zoro-stock--{{ block.settings.layout }}
+    zoro-stock--{{ block.settings.alignment }}
+    {% unless block.settings.show_on_mobile %}zoro-stock--hide-mobile{% endunless %}
+    {% unless block.settings.show_on_desktop %}zoro-stock--hide-desktop{% endunless %}
+  "
+  style="
+    --zoro-bg: {{ block.settings.background_color }};
+    --zoro-text: {{ block.settings.text_color }};
+    --zoro-accent: {{ block.settings.warning_color }};
+    --zoro-track: {{ block.settings.track_color }};
+    --zoro-badge-bg: {{ block.settings.badge_background }};
+    --zoro-badge-text: {{ block.settings.badge_text_color }};
+    --zoro-button-bg: {{ block.settings.button_background }};
+    --zoro-button-text: {{ block.settings.button_text_color }};
+    --zoro-radius: {{ block.settings.corner_radius }}px;
+    --zoro-size: {{ block.settings.font_size }}px;
+    --zoro-mobile-size: {{ block.settings.mobile_font_size }}px;
+    --zoro-top-space: {{ block.settings.top_spacing }}px;
+    --zoro-progress-height: {{ block.settings.progress_height }}px;
+  "
   data-zoro-stock
   data-product-id="{{ product.id }}"
   data-variant-id="{{ active_variant.id }}"
@@ -97,66 +123,473 @@
   data-show-untracked="{{ block.settings.show_untracked }}"
   data-show-sold-out="{{ block.settings.show_sold_out }}"
   data-show-progress="{{ block.settings.show_progress }}"
+  data-has-companion="{{ has_companion }}"
+  data-add-both-text="{{ block.settings.add_both_text | escape }}"
+  data-adding-text="{{ block.settings.adding_text | escape }}"
+  data-added-text="{{ block.settings.added_text | escape }}"
+  data-add-error-text="{{ block.settings.add_error_text | escape }}"
+  data-after-add="{{ block.settings.after_add }}"
   hidden
   {{ block.shopify_attributes }}
 >
-  <div class="zoro-stock__alert" role="status" aria-live="polite" aria-atomic="true">{% if block.settings.show_pulse %}<span class="zoro-stock__pulse" aria-hidden="true"></span>{% endif %}<span data-zoro-message></span></div>
-  <div class="zoro-stock__track" data-zoro-progress role="progressbar" aria-label="Stock remaining" aria-valuemin="0" aria-valuemax="{{ threshold }}" aria-valuenow="0"><span class="zoro-stock__fill" data-zoro-fill></span></div>
-  <script type="application/json" data-zoro-variants>[{% for variant in product.variants %}{"id":{{ variant.id | json }},"available":{{ variant.available | json }},"quantity":{{ variant.inventory_quantity | json }},"management":{{ variant.inventory_management | json }},"policy":{{ variant.inventory_policy | json }}}{% unless forloop.last %},{% endunless %}{% endfor %}]</script>
+  <div data-zoro-inventory>
+    <div class="zoro-stock__alert" role="status" aria-live="polite" aria-atomic="true">
+      {% if block.settings.show_pulse %}
+        <span class="zoro-stock__pulse" aria-hidden="true"></span>
+      {% endif %}
+      <span data-zoro-message></span>
+      {% if block.settings.show_sold_out_badge %}
+        <span class="zoro-stock__badge" data-zoro-sold-out-badge hidden>
+          {{ block.settings.sold_out_badge_text }}
+        </span>
+      {% endif %}
+    </div>
+
+    <div
+      class="zoro-stock__track"
+      data-zoro-progress
+      role="progressbar"
+      aria-label="Stock remaining"
+      aria-valuemin="0"
+      aria-valuemax="{{ threshold }}"
+      aria-valuenow="0"
+    >
+      <span class="zoro-stock__fill" data-zoro-fill></span>
+    </div>
+  </div>
+
+  <script type="application/json" data-zoro-variants>
+    [
+      {% for variant in product.variants %}
+        {
+          "id": {{ variant.id | json }},
+          "available": {{ variant.available | json }},
+          "quantity": {{ variant.inventory_quantity | json }},
+          "management": {{ variant.inventory_management | json }},
+          "policy": {{ variant.inventory_policy | json }}
+        }{% unless forloop.last %},{% endunless %}
+      {% endfor %}
+    ]
+  </script>
+
+  {% if has_companion %}
+    <div class="zoro-stock__pair" data-zoro-pair>
+      {% if companion_product.featured_image %}
+        {{
+          companion_product.featured_image
+          | image_url: width: 160
+          | image_tag:
+            class: 'zoro-stock__pair-image',
+            loading: 'lazy',
+            widths: '80, 120, 160',
+            alt: companion_product.title
+        }}
+      {% endif %}
+      <div class="zoro-stock__pair-details">
+        <strong>{{ block.settings.companion_heading }}</strong>
+        <span>{{ companion_product.title }} · {{ companion_product.price | money }}</span>
+        {% if companion_product.variants.size > 1 %}
+          <label class="zoro-stock__variant-label">
+            <span class="visually-hidden">{{ companion_product.title }}</span>
+            <select data-zoro-companion-variant>
+              {% for variant in companion_product.variants %}
+                <option
+                  value="{{ variant.id }}"
+                  {% unless variant.available %}disabled{% endunless %}
+                  {% if variant == companion_product.selected_or_first_available_variant %}selected{% endif %}
+                >
+                  {{ variant.title }}{% unless variant.available %} - {{ block.settings.sold_out_badge_text }}{% endunless %}
+                </option>
+              {% endfor %}
+            </select>
+          </label>
+        {% else %}
+          <input
+            type="hidden"
+            data-zoro-companion-variant
+            value="{{ companion_product.selected_or_first_available_variant.id }}"
+          >
+        {% endif %}
+      </div>
+      <button
+        class="zoro-stock__pair-button"
+        type="button"
+        data-zoro-add-both
+        {% unless companion_product.selected_or_first_available_variant.available %}disabled{% endunless %}
+      >
+        {{ block.settings.add_both_text }}
+      </button>
+      <span class="zoro-stock__pair-status" data-zoro-pair-status role="status" aria-live="polite"></span>
+    </div>
+  {% endif %}
 </div>
 
 <style>
-#LowStockCounter-{{ block.id }}{box-sizing:border-box;width:100%;margin-top:var(--zoro-top-space);color:var(--zoro-text);font-family:var(--font-body-family,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif);font-size:var(--zoro-size)}#LowStockCounter-{{ block.id }}[hidden]{display:none}#LowStockCounter-{{ block.id }}.zoro-stock--card{padding:.75rem .875rem;border:1px solid color-mix(in srgb,var(--zoro-accent) 22%,transparent);border-radius:var(--zoro-radius);background:var(--zoro-bg);box-shadow:0 1px 0 rgba(0,0,0,.04)}#LowStockCounter-{{ block.id }}.zoro-stock--compact{padding:.5rem .625rem;border-radius:var(--zoro-radius);background:var(--zoro-bg)}#LowStockCounter-{{ block.id }} .zoro-stock__alert{display:flex;align-items:center;gap:.625rem;font-weight:600;line-height:1.35}#LowStockCounter-{{ block.id }}.zoro-stock--center .zoro-stock__alert{justify-content:center;text-align:center}#LowStockCounter-{{ block.id }}.zoro-stock--right .zoro-stock__alert{justify-content:flex-end;text-align:right}#LowStockCounter-{{ block.id }} .zoro-stock__pulse{flex:0 0 auto;width:.5rem;height:.5rem;border-radius:50%;background:var(--zoro-accent);animation:zoro-pulse-{{ block.id }} 1.6s ease-out infinite}#LowStockCounter-{{ block.id }} .zoro-stock__track{height:var(--zoro-progress-height);margin-top:.625rem;overflow:hidden;border-radius:999px;background:var(--zoro-track)}#LowStockCounter-{{ block.id }} .zoro-stock__fill{display:block;width:0;height:100%;border-radius:inherit;background:var(--zoro-accent);transition:width 320ms ease}@keyframes zoro-pulse-{{ block.id }}{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--zoro-accent) 48%,transparent);transform:scale(.9)}75%,100%{box-shadow:0 0 0 .55rem transparent;transform:scale(1)}}@media(prefers-reduced-motion:reduce){#LowStockCounter-{{ block.id }} .zoro-stock__pulse{animation:none}#LowStockCounter-{{ block.id }} .zoro-stock__fill{transition:none}}@media(max-width:749px){#LowStockCounter-{{ block.id }}{font-size:var(--zoro-mobile-size)}#LowStockCounter-{{ block.id }}.zoro-stock--hide-mobile{display:none!important}}@media(min-width:750px){#LowStockCounter-{{ block.id }}.zoro-stock--hide-desktop{display:none!important}}
+  #LowStockCounter-{{ block.id }} {
+    box-sizing: border-box;
+    width: 100%;
+    margin-top: var(--zoro-top-space);
+    color: var(--zoro-text);
+    font-family: var(--font-body-family, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+    font-size: var(--zoro-size);
+  }
+  #LowStockCounter-{{ block.id }}[hidden] { display: none; }
+  #LowStockCounter-{{ block.id }}.zoro-stock--card {
+    padding: .75rem .875rem;
+    border: 1px solid color-mix(in srgb, var(--zoro-accent) 22%, transparent);
+    border-radius: var(--zoro-radius);
+    background: var(--zoro-bg);
+    box-shadow: 0 1px 0 rgba(0, 0, 0, .04);
+  }
+  #LowStockCounter-{{ block.id }}.zoro-stock--compact {
+    padding: .5rem .625rem;
+    border-radius: var(--zoro-radius);
+    background: var(--zoro-bg);
+  }
+  #LowStockCounter-{{ block.id }} .zoro-stock__alert {
+    display: flex;
+    align-items: center;
+    gap: .625rem;
+    font-weight: 600;
+    line-height: 1.35;
+  }
+  #LowStockCounter-{{ block.id }}.zoro-stock--center .zoro-stock__alert { justify-content: center; text-align: center; }
+  #LowStockCounter-{{ block.id }}.zoro-stock--right .zoro-stock__alert { justify-content: flex-end; text-align: right; }
+  #LowStockCounter-{{ block.id }} .zoro-stock__pulse {
+    flex: 0 0 auto;
+    width: .5rem;
+    height: .5rem;
+    border-radius: 50%;
+    background: var(--zoro-accent);
+    animation: zoro-pulse-{{ block.id }} 1.6s ease-out infinite;
+  }
+  #LowStockCounter-{{ block.id }} .zoro-stock__track {
+    height: var(--zoro-progress-height);
+    margin-top: .625rem;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--zoro-track);
+  }
+  #LowStockCounter-{{ block.id }} .zoro-stock__fill {
+    display: block;
+    width: 0;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--zoro-accent);
+    transition: width 320ms ease;
+  }
+  #LowStockCounter-{{ block.id }} .zoro-stock__badge {
+    flex: 0 0 auto;
+    padding: .2rem .5rem;
+    border-radius: 999px;
+    color: var(--zoro-badge-text);
+    background: var(--zoro-badge-bg);
+    font-size: .82em;
+    font-weight: 700;
+  }
+  #LowStockCounter-{{ block.id }} .zoro-stock__pair {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: .75rem;
+    margin-top: .75rem;
+    padding-top: .75rem;
+    border-top: 1px solid color-mix(in srgb, var(--zoro-text) 14%, transparent);
+  }
+  #LowStockCounter-{{ block.id }} .zoro-stock__pair-image {
+    width: 3rem;
+    height: 3rem;
+    border-radius: calc(var(--zoro-radius) * .65);
+    object-fit: cover;
+  }
+  #LowStockCounter-{{ block.id }} .zoro-stock__pair-details {
+    display: grid;
+    min-width: 0;
+    gap: .2rem;
+  }
+  #LowStockCounter-{{ block.id }} .zoro-stock__pair-details > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  #LowStockCounter-{{ block.id }} [data-zoro-companion-variant] {
+    width: 100%;
+    min-height: 2rem;
+    padding: .25rem .5rem;
+    border: 1px solid color-mix(in srgb, var(--zoro-text) 24%, transparent);
+    border-radius: .35rem;
+    color: inherit;
+    background: #fff;
+  }
+  #LowStockCounter-{{ block.id }} .zoro-stock__pair-button {
+    min-height: 2.5rem;
+    padding: .55rem .85rem;
+    border: 0;
+    border-radius: calc(var(--zoro-radius) * .75);
+    color: var(--zoro-button-text);
+    background: var(--zoro-button-bg);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  #LowStockCounter-{{ block.id }} .zoro-stock__pair-button:disabled { cursor: not-allowed; opacity: .55; }
+  #LowStockCounter-{{ block.id }} .zoro-stock__pair-status {
+    grid-column: 1 / -1;
+    min-height: 1em;
+    font-size: .86em;
+  }
+  @keyframes zoro-pulse-{{ block.id }} {
+    0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--zoro-accent) 48%, transparent); transform: scale(.9); }
+    75%, 100% { box-shadow: 0 0 0 .55rem transparent; transform: scale(1); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #LowStockCounter-{{ block.id }} .zoro-stock__pulse { animation: none; }
+    #LowStockCounter-{{ block.id }} .zoro-stock__fill { transition: none; }
+  }
+  @media (max-width: 749px) {
+    #LowStockCounter-{{ block.id }} { font-size: var(--zoro-mobile-size); }
+    #LowStockCounter-{{ block.id }}.zoro-stock--hide-mobile { display: none !important; }
+    #LowStockCounter-{{ block.id }} .zoro-stock__pair { grid-template-columns: auto minmax(0, 1fr); }
+    #LowStockCounter-{{ block.id }} .zoro-stock__pair-button { grid-column: 1 / -1; width: 100%; }
+  }
+  @media (min-width: 750px) {
+    #LowStockCounter-{{ block.id }}.zoro-stock--hide-desktop { display: none !important; }
+  }
 </style>
 
 <script>
-(() => {
-  const root=document.getElementById('LowStockCounter-{{ block.id }}');if(!root||root.dataset.ready==='true')return;root.dataset.ready='true';
-  const message=root.querySelector('[data-zoro-message]'),progress=root.querySelector('[data-zoro-progress]'),fill=root.querySelector('[data-zoro-fill]'),source=root.querySelector('[data-zoro-variants]');
-  const threshold=Math.max(1,Number(root.dataset.threshold)||10),displayMode=root.dataset.displayMode||'always',designMode=root.dataset.designMode==='true',showProgress=root.dataset.showProgress==='true',targetEligible=root.dataset.targetEligible==='true',variants=JSON.parse(source?.textContent||'[]');let updateTimer;
-  const text=(template,count)=>(template||'').split('[count]').join(String(count));
-  const show=(copy,count=0,progressVisible=false)=>{message.textContent=copy;root.hidden=false;progress.hidden=!showProgress||!progressVisible;progress.setAttribute('aria-valuenow',String(count));fill.style.width=`${Math.min(100,Math.max(0,count/threshold*100))}%`};
-  const hide=()=>{root.hidden=true};
-  const selectedVariantId=(event)=>{const detail=event?.detail?.variant||event?.detail;if(detail?.id)return String(detail.id);const section=root.closest('.shopify-section')||root.closest('section')||document,form=section.querySelector('form[action*="/cart/add"]')||document.querySelector('form[action*="/cart/add"]'),input=form?.querySelector('[name="id"]');return String(input?.value||new URLSearchParams(location.search).get('variant')||root.dataset.variantId)};
-  const update=(event)=>{if(!targetEligible){if(designMode)show(root.dataset.targetMessage||'This product does not match the targeting rule.');else hide();return}if(!variants.length){if(designMode)show(root.dataset.editorMessage||'Place this block on a product template.');else hide();return}const id=selectedVariantId(event),variant=variants.find(item=>String(item.id)===id)||variants[0];if(!variant)return hide();if(!variant.available){if(root.dataset.showSoldOut==='true')show(root.dataset.soldOutMessage);else hide();return}const quantity=Number(variant.quantity),tracked=Boolean(variant.management)&&variant.policy!=='continue'&&Number.isFinite(quantity);if(!tracked){if(root.dataset.showUntracked==='true')show(root.dataset.untrackedMessage);else hide();return}if(displayMode==='low_only'&&quantity>threshold)return hide();const copy=root.dataset.countDisplay==='exact'?text(root.dataset.lowMessage,quantity):root.dataset.generalMessage;show(copy,quantity,true)};
-  const scheduleUpdate=(event)=>{window.clearTimeout(updateTimer);updateTimer=window.setTimeout(()=>update(event),40)};
-  ['variant:change','product:variant-change','variantChanged','shopify:variant:change'].forEach(name=>document.addEventListener(name,scheduleUpdate));document.addEventListener('change',event=>{if(event.target.closest('variant-selects, variant-radios, [data-variant-selector], form[action*="/cart/add"]'))scheduleUpdate(event)});window.addEventListener('popstate',scheduleUpdate);document.addEventListener('shopify:section:load',scheduleUpdate);document.addEventListener('shopify:block:select',event=>{if(event.target.contains(root)||event.target===root)update(event)});document.addEventListener('shopify:section:unload',event=>{if(event.target.contains(root))window.clearTimeout(updateTimer)});update();
-})();
+  (() => {
+    const root = document.getElementById('LowStockCounter-{{ block.id }}');
+    if (!root || root.dataset.ready === 'true') return;
+    root.dataset.ready = 'true';
+
+    const message = root.querySelector('[data-zoro-message]');
+    const progress = root.querySelector('[data-zoro-progress]');
+    const fill = root.querySelector('[data-zoro-fill]');
+    const source = root.querySelector('[data-zoro-variants]');
+    const inventory = root.querySelector('[data-zoro-inventory]');
+    const soldOutBadge = root.querySelector('[data-zoro-sold-out-badge]');
+    const pair = root.querySelector('[data-zoro-pair]');
+    const companionVariant = root.querySelector('[data-zoro-companion-variant]');
+    const addBothButton = root.querySelector('[data-zoro-add-both]');
+    const pairStatus = root.querySelector('[data-zoro-pair-status]');
+    const threshold = Math.max(1, Number(root.dataset.threshold) || 10);
+    const displayMode = root.dataset.displayMode || 'always';
+    const designMode = root.dataset.designMode === 'true';
+    const showProgress = root.dataset.showProgress === 'true';
+    const targetEligible = root.dataset.targetEligible === 'true';
+    const variants = JSON.parse(source?.textContent || '[]');
+    let updateTimer;
+
+    const text = (template, count) =>
+      (template || '').split('[count]').join(String(count));
+
+    const setRootVisibility = () => {
+      root.hidden = inventory.hidden && !pair;
+    };
+
+    const show = (copy, count = 0, progressVisible = false, soldOut = false) => {
+      message.textContent = copy;
+      inventory.hidden = false;
+      if (soldOutBadge) soldOutBadge.hidden = !soldOut;
+      progress.hidden = !showProgress || !progressVisible;
+      progress.setAttribute('aria-valuenow', String(count));
+      fill.style.width = `${Math.min(100, Math.max(0, count / threshold * 100))}%`;
+      root.hidden = false;
+    };
+
+    const hide = () => {
+      inventory.hidden = true;
+      if (soldOutBadge) soldOutBadge.hidden = true;
+      setRootVisibility();
+    };
+
+    const selectedVariantId = (event) => {
+      const detail = event?.detail?.variant || event?.detail;
+      if (detail?.id) return String(detail.id);
+
+      const section = root.closest('.shopify-section') || root.closest('section') || document;
+      const form = section.querySelector('form[action*="/cart/add"]')
+        || document.querySelector('form[action*="/cart/add"]');
+      const input = form?.querySelector('[name="id"]');
+      return String(
+        input?.value
+        || new URLSearchParams(location.search).get('variant')
+        || root.dataset.variantId
+      );
+    };
+
+    const update = (event) => {
+      if (!targetEligible) {
+        if (designMode) show(root.dataset.targetMessage || 'This product does not match the targeting rule.');
+        else hide();
+        return;
+      }
+
+      if (!variants.length) {
+        if (designMode) show(root.dataset.editorMessage || 'Place this block on a product template.');
+        else hide();
+        return;
+      }
+
+      const id = selectedVariantId(event);
+      const variant = variants.find((item) => String(item.id) === id) || variants[0];
+      if (!variant) return hide();
+
+      if (!variant.available) {
+        if (root.dataset.showSoldOut === 'true' || soldOutBadge) {
+          show(
+            root.dataset.showSoldOut === 'true' ? root.dataset.soldOutMessage : '',
+            0,
+            false,
+            true
+          );
+        }
+        else hide();
+        return;
+      }
+
+      const quantity = Number(variant.quantity);
+      const tracked = Boolean(variant.management)
+        && variant.policy !== 'continue'
+        && Number.isFinite(quantity);
+
+      if (!tracked) {
+        if (root.dataset.showUntracked === 'true') show(root.dataset.untrackedMessage);
+        else hide();
+        return;
+      }
+
+      if (displayMode === 'low_only' && quantity > threshold) return hide();
+      const copy = root.dataset.countDisplay === 'exact'
+        ? text(root.dataset.lowMessage, quantity)
+        : root.dataset.generalMessage;
+      show(copy, quantity, true);
+    };
+
+    const scheduleUpdate = (event) => {
+      window.clearTimeout(updateTimer);
+      updateTimer = window.setTimeout(() => update(event), 40);
+    };
+
+    ['variant:change', 'product:variant-change', 'variantChanged', 'shopify:variant:change']
+      .forEach((name) => document.addEventListener(name, scheduleUpdate));
+
+    document.addEventListener('change', (event) => {
+      if (event.target.closest(
+        'variant-selects, variant-radios, [data-variant-selector], form[action*="/cart/add"]'
+      )) scheduleUpdate(event);
+    });
+    window.addEventListener('popstate', scheduleUpdate);
+    document.addEventListener('shopify:section:load', scheduleUpdate);
+    document.addEventListener('shopify:block:select', (event) => {
+      if (event.target.contains(root) || event.target === root) update(event);
+    });
+    document.addEventListener('shopify:section:unload', (event) => {
+      if (event.target.contains(root)) window.clearTimeout(updateTimer);
+    });
+
+    if (addBothButton && companionVariant) {
+      addBothButton.addEventListener('click', async () => {
+        const currentId = Number(selectedVariantId());
+        const companionId = Number(companionVariant.value);
+        if (!currentId || !companionId) return;
+
+        addBothButton.disabled = true;
+        addBothButton.textContent = root.dataset.addingText;
+        pairStatus.textContent = '';
+
+        try {
+          const base = window.Shopify?.routes?.root || '/';
+          const response = await fetch(`${base}cart/add.js`, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              items: [
+                { id: currentId, quantity: 1 },
+                { id: companionId, quantity: 1 }
+              ]
+            })
+          });
+          if (!response.ok) throw new Error('Cart request failed');
+
+          addBothButton.textContent = root.dataset.addedText;
+          pairStatus.textContent = root.dataset.addedText;
+          document.dispatchEvent(new CustomEvent('cart:refresh'));
+          document.dispatchEvent(new CustomEvent('cart:updated'));
+          if (root.dataset.afterAdd === 'cart') {
+            window.location.assign(`${base}cart`);
+            return;
+          }
+        } catch (error) {
+          pairStatus.textContent = root.dataset.addErrorText;
+        }
+
+        addBothButton.disabled = false;
+        addBothButton.textContent = root.dataset.addBothText;
+      });
+    }
+
+    update();
+    setRootVisibility();
+  })();
 </script>
 
 {% schema %}
-{"name":"Low stock counter","target":"section","settings":[
-{"type":"header","content":"Inventory rules"},
-{"type":"number","id":"low_stock_threshold","label":"Low-stock threshold","default":10,"info":"Used only when Visibility is Only when stock is low. This does not set the inventory count."},
-{"type":"select","id":"display_mode","label":"Visibility","default":"always","options":[{"value":"always","label":"Always show real inventory"},{"value":"low_only","label":"Only when stock is low"}]},
-{"type":"select","id":"count_display","label":"Tracked inventory display","default":"exact","options":[{"value":"exact","label":"Show exact count"},{"value":"general","label":"Show general message"}]},
-{"type":"checkbox","id":"show_untracked","label":"Show message for untracked inventory","default":true},
-{"type":"checkbox","id":"show_sold_out","label":"Show sold-out message","default":true},
-{"type":"header","content":"Product targeting"},
-{"type":"select","id":"target_rule","label":"Display on","default":"all","options":[{"value":"all","label":"All products"},{"value":"include_tag","label":"Products with tag"},{"value":"exclude_tag","label":"Products without tag"},{"value":"vendor","label":"Products from vendor"},{"value":"product_type","label":"Products of type"}]},
-{"type":"text","id":"target_value","label":"Tag, vendor, or product type","info":"Required unless Display on is All products. Matching is not case-sensitive."},
-{"type":"header","content":"Messages"},
-{"type":"text","id":"alert_text","label":"Exact-count message","default":"Hurry! Only [count] items left in stock!","info":"Use [count] for the selected variant's real inventory."},
-{"type":"text","id":"general_low_stock_text","label":"General low-stock message","default":"Low stock - order soon!"},
-{"type":"text","id":"untracked_text","label":"Untracked inventory message","default":"Popular right now"},
-{"type":"text","id":"sold_out_text","label":"Sold-out message","default":"This item is currently sold out."},
-{"type":"text","id":"editor_help_text","label":"Wrong-template editor message","default":"Open a product template and place this block below the price."},
-{"type":"select","id":"message_language","label":"Message language","default":"custom","options":[{"value":"custom","label":"Custom messages below"},{"value":"auto","label":"Storefront language automatically"},{"value":"en","label":"English"},{"value":"es","label":"Spanish"},{"value":"fr","label":"French"},{"value":"de","label":"German"}]},
-{"type":"header","content":"Appearance"},
-{"type":"select","id":"layout","label":"Layout","default":"card","options":[{"value":"card","label":"Card"},{"value":"compact","label":"Compact"},{"value":"text","label":"Text only"}]},
-{"type":"checkbox","id":"show_progress","label":"Show progress bar","default":true},
-{"type":"checkbox","id":"show_pulse","label":"Show pulsing indicator","default":true},
-{"type":"select","id":"alignment","label":"Text alignment","default":"left","options":[{"value":"left","label":"Left"},{"value":"center","label":"Center"},{"value":"right","label":"Right"}]},
-{"type":"checkbox","id":"show_on_mobile","label":"Show on mobile","default":true},
-{"type":"checkbox","id":"show_on_desktop","label":"Show on desktop","default":true},
-{"type":"range","id":"font_size","min":12,"max":20,"step":1,"unit":"px","label":"Font size","default":14},
-{"type":"range","id":"mobile_font_size","min":12,"max":20,"step":1,"unit":"px","label":"Mobile font size","default":14},
-{"type":"range","id":"corner_radius","min":0,"max":20,"step":1,"unit":"px","label":"Corner radius","default":8},
-{"type":"range","id":"top_spacing","min":0,"max":40,"step":2,"unit":"px","label":"Space above","default":12},
-{"type":"range","id":"progress_height","min":2,"max":10,"step":1,"unit":"px","label":"Progress bar height","default":4},
-{"type":"color","id":"background_color","label":"Background","default":"#fff4f4"},
-{"type":"color","id":"text_color","label":"Text","default":"#8e1f1f"},
-{"type":"color","id":"warning_color","label":"Indicator and progress","default":"#d72c0d"},
-{"type":"color","id":"track_color","label":"Progress track","default":"#f2c6c1"}
-]}
+{
+  "name": "Low stock counter",
+  "target": "section",
+  "settings": [
+    {"type":"header","content":"Inventory rules"},
+    {"type":"number","id":"low_stock_threshold","label":"Low-stock threshold","default":10,"info":"Used only when Visibility is Only when stock is low. This does not set the inventory count."},
+    {"type":"select","id":"display_mode","label":"Visibility","default":"always","options":[{"value":"always","label":"Always show real inventory"},{"value":"low_only","label":"Only when stock is low"}]},
+    {"type":"select","id":"count_display","label":"Tracked inventory display","default":"exact","options":[{"value":"exact","label":"Show exact count"},{"value":"general","label":"Show general message"}]},
+    {"type":"checkbox","id":"show_untracked","label":"Show message for untracked inventory","default":true},
+    {"type":"checkbox","id":"show_sold_out","label":"Show sold-out message","default":true},
+    {"type":"checkbox","id":"show_sold_out_badge","label":"Show sold-out badge","default":true},
+    {"type":"text","id":"sold_out_badge_text","label":"Sold-out badge text","default":"Sold out"},
+    {"type":"header","content":"Add both to cart"},
+    {"type":"product","id":"companion_product","label":"Companion product","info":"Optional. Select a second product to offer with this product."},
+    {"type":"text","id":"companion_heading","label":"Offer heading","default":"Complete the set"},
+    {"type":"text","id":"add_both_text","label":"Button text","default":"Add both to cart"},
+    {"type":"text","id":"adding_text","label":"Loading text","default":"Adding..."},
+    {"type":"text","id":"added_text","label":"Success text","default":"Both items added"},
+    {"type":"text","id":"add_error_text","label":"Error text","default":"Could not add both items. Please try again."},
+    {"type":"select","id":"after_add","label":"After adding","default":"cart","options":[{"value":"cart","label":"Open cart"},{"value":"stay","label":"Stay on product page"}]},
+    {"type":"header","content":"Product targeting"},
+    {"type":"select","id":"target_rule","label":"Display on","default":"all","options":[{"value":"all","label":"All products"},{"value":"include_tag","label":"Products with tag"},{"value":"exclude_tag","label":"Products without tag"},{"value":"vendor","label":"Products from vendor"},{"value":"product_type","label":"Products of type"}]},
+    {"type":"text","id":"target_value","label":"Tag, vendor, or product type","info":"Required unless Display on is All products. Matching is not case-sensitive."},
+    {"type":"header","content":"Messages"},
+    {"type":"text","id":"alert_text","label":"Exact-count message","default":"Hurry! Only [count] items left in stock!","info":"Use [count] for the selected variant's real inventory."},
+    {"type":"text","id":"general_low_stock_text","label":"General low-stock message","default":"Low stock - order soon!"},
+    {"type":"text","id":"untracked_text","label":"Untracked inventory message","default":"Popular right now"},
+    {"type":"text","id":"sold_out_text","label":"Sold-out message","default":"This item is currently sold out."},
+    {"type":"text","id":"editor_help_text","label":"Wrong-template editor message","default":"Open a product template and place this block below the price."},
+    {"type":"select","id":"message_language","label":"Message language","default":"custom","options":[{"value":"custom","label":"Custom messages below"},{"value":"auto","label":"Storefront language automatically"},{"value":"en","label":"English"},{"value":"es","label":"Spanish"},{"value":"fr","label":"French"},{"value":"de","label":"German"}]},
+    {"type":"header","content":"Appearance"},
+    {"type":"select","id":"layout","label":"Layout","default":"card","options":[{"value":"card","label":"Card"},{"value":"compact","label":"Compact"},{"value":"text","label":"Text only"}]},
+    {"type":"checkbox","id":"show_progress","label":"Show progress bar","default":true},
+    {"type":"checkbox","id":"show_pulse","label":"Show pulsing indicator","default":true},
+    {"type":"select","id":"alignment","label":"Text alignment","default":"left","options":[{"value":"left","label":"Left"},{"value":"center","label":"Center"},{"value":"right","label":"Right"}]},
+    {"type":"checkbox","id":"show_on_mobile","label":"Show on mobile","default":true},
+    {"type":"checkbox","id":"show_on_desktop","label":"Show on desktop","default":true},
+    {"type":"range","id":"font_size","min":12,"max":20,"step":1,"unit":"px","label":"Font size","default":14},
+    {"type":"range","id":"mobile_font_size","min":12,"max":20,"step":1,"unit":"px","label":"Mobile font size","default":14},
+    {"type":"range","id":"corner_radius","min":0,"max":20,"step":1,"unit":"px","label":"Corner radius","default":8},
+    {"type":"range","id":"top_spacing","min":0,"max":40,"step":2,"unit":"px","label":"Space above","default":12},
+    {"type":"range","id":"progress_height","min":2,"max":10,"step":1,"unit":"px","label":"Progress bar height","default":4},
+    {"type":"color","id":"background_color","label":"Background","default":"#fff4f4"},
+    {"type":"color","id":"text_color","label":"Text","default":"#8e1f1f"},
+    {"type":"color","id":"warning_color","label":"Indicator and progress","default":"#d72c0d"},
+    {"type":"color","id":"track_color","label":"Progress track","default":"#f2c6c1"},
+    {"type":"color","id":"badge_background","label":"Sold-out badge background","default":"#8e1f1f"},
+    {"type":"color","id":"badge_text_color","label":"Sold-out badge text","default":"#ffffff"},
+    {"type":"color","id":"button_background","label":"Add-both button background","default":"#008060"},
+    {"type":"color","id":"button_text_color","label":"Add-both button text","default":"#ffffff"}
+  ]
+}
 {% endschema %}
