@@ -1,0 +1,274 @@
+{% liquid
+  assign threshold = block.settings.low_stock_threshold | default: 10
+  assign low_stock_text = block.settings.low_stock_text | default: 'Only [count] left'
+  assign sold_out_text = block.settings.sold_out_text | default: 'Sold out'
+%}
+
+<div
+  id="ZoroCartStock-{{ block.id }}"
+  class="zoro-cart-stock"
+  style="
+    --zoro-cart-bg: {{ block.settings.background_color }};
+    --zoro-cart-text: {{ block.settings.text_color }};
+    --zoro-cart-accent: {{ block.settings.warning_color }};
+    --zoro-cart-sold-bg: {{ block.settings.sold_out_background }};
+    --zoro-cart-sold-text: {{ block.settings.sold_out_text_color }};
+    --zoro-cart-radius: {{ block.settings.corner_radius }}px;
+    --zoro-cart-size: {{ block.settings.font_size }}px;
+  "
+  data-zoro-cart-stock
+  data-threshold="{{ threshold }}"
+  data-show-low="{{ block.settings.show_low_stock }}"
+  data-show-sold-out="{{ block.settings.show_sold_out }}"
+  data-low-text="{{ low_stock_text | escape }}"
+  data-sold-out-text="{{ sold_out_text | escape }}"
+  {{ block.shopify_attributes }}
+>
+  <div class="zoro-cart-stock__fallback" data-zoro-cart-fallback hidden></div>
+
+  <script type="application/json" data-zoro-cart-items>
+    [
+      {% for item in cart.items %}
+        {% liquid
+          assign cart_variant = item.variant
+          assign cart_tracked = false
+          if cart_variant.inventory_management != blank and cart_variant.inventory_policy != 'continue'
+            assign cart_tracked = true
+          endif
+        %}
+        {
+          "key": {{ item.key | json }},
+          "title": {{ item.product.title | json }},
+          "url": {{ item.url | json }},
+          "variantId": {{ cart_variant.id | json }},
+          "available": {{ cart_variant.available | json }},
+          "quantity": {{ cart_variant.inventory_quantity | json }},
+          "tracked": {{ cart_tracked | json }}
+        }{% unless forloop.last %},{% endunless %}
+      {% endfor %}
+    ]
+  </script>
+</div>
+
+<style>
+  #ZoroCartStock-{{ block.id }} { font-family: var(--font-body-family, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif); }
+  #ZoroCartStock-{{ block.id }} .zoro-cart-stock__fallback {
+    display: grid;
+    gap: .5rem;
+    margin: .75rem 0;
+  }
+  .zoro-cart-stock-badge-{{ block.id }} {
+    display: inline-flex;
+    align-items: center;
+    gap: .38rem;
+    width: fit-content;
+    max-width: 100%;
+    margin-top: .45rem;
+    padding: .32rem .55rem;
+    border-radius: var(--zoro-cart-radius);
+    color: var(--zoro-cart-text);
+    background: var(--zoro-cart-bg);
+    font-family: var(--font-body-family, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+    font-size: var(--zoro-cart-size);
+    font-weight: 700;
+    line-height: 1.25;
+  }
+  .zoro-cart-stock-badge-{{ block.id }}::before {
+    content: "";
+    width: .45rem;
+    height: .45rem;
+    border-radius: 50%;
+    background: var(--zoro-cart-accent);
+    animation: zoro-cart-pulse-{{ block.id }} 1.55s ease-out infinite;
+  }
+  .zoro-cart-stock-badge-{{ block.id }}[data-state="sold-out"] {
+    color: var(--zoro-cart-sold-text);
+    background: var(--zoro-cart-sold-bg);
+  }
+  @keyframes zoro-cart-pulse-{{ block.id }} {
+    0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--zoro-cart-accent) 44%, transparent); transform: scale(.9); }
+    80%, 100% { box-shadow: 0 0 0 .5rem transparent; transform: scale(1); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .zoro-cart-stock-badge-{{ block.id }}::before { animation: none; }
+  }
+</style>
+
+<script>
+  (() => {
+    const root = document.getElementById('ZoroCartStock-{{ block.id }}');
+    if (!root || root.dataset.ready === 'true') return;
+    root.dataset.ready = 'true';
+
+    const source = root.querySelector('[data-zoro-cart-items]');
+    const fallback = root.querySelector('[data-zoro-cart-fallback]');
+    const items = JSON.parse(source?.textContent || '[]');
+    const threshold = Math.max(1, Number(root.dataset.threshold) || 10);
+    const showLow = root.dataset.showLow === 'true';
+    const showSoldOut = root.dataset.showSoldOut === 'true';
+    const lowText = root.dataset.lowText || 'Only [count] left';
+    const soldOutText = root.dataset.soldOutText || 'Sold out';
+    const badgeClass = 'zoro-cart-stock-badge-{{ block.id }}';
+
+    const text = (template, count) => template.split('[count]').join(String(count));
+
+    const badgeFor = (item) => {
+      const quantity = Number(item.quantity);
+      if (!item.available && showSoldOut) return { copy: soldOutText, state: 'sold-out' };
+      if (showLow && item.tracked && Number.isFinite(quantity) && quantity <= threshold) {
+        return { copy: text(lowText, quantity), state: 'low' };
+      }
+      return null;
+    };
+
+    const lineFor = (item) => {
+      const selectors = [
+        `[href*="variant=${CSS.escape(String(item.variantId))}"]`,
+        `[href="${CSS.escape(item.url)}"]`,
+        `[href*="${CSS.escape(item.url.split('?')[0])}"]`
+      ];
+      for (const selector of selectors) {
+        const anchor = document.querySelector(selector);
+        const line = anchor?.closest('.cart-item, .cart__row, tr, li, article, [data-cart-item]');
+        if (line && !line.contains(root)) return line;
+      }
+      return null;
+    };
+
+    const renderBadge = (target, item, badge) => {
+      if (target.querySelector(`[data-zoro-cart-line="{{ block.id }}-${item.key}"]`)) return true;
+      const node = document.createElement('span');
+      node.className = badgeClass;
+      node.dataset.zoroCartLine = '{{ block.id }}-' + item.key;
+      node.dataset.state = badge.state;
+      node.textContent = badge.copy;
+      const info = target.querySelector('.cart-item__details, .cart-item__name, .cart__meta, td, h3, a');
+      (info || target).insertAdjacentElement('afterend', node);
+      return true;
+    };
+
+    const render = () => {
+      let moved = 0;
+      const rows = [];
+      items.forEach((item) => {
+        const badge = badgeFor(item);
+        if (!badge) return;
+        const line = lineFor(item);
+        if (line && renderBadge(line, item, badge)) moved += 1;
+        rows.push(`<span class="${badgeClass}" data-state="${badge.state}">${item.title}: ${badge.copy}</span>`);
+      });
+
+      if (fallback) {
+        fallback.hidden = moved > 0 || rows.length === 0;
+        fallback.innerHTML = fallback.hidden ? '' : rows.join('');
+      }
+    };
+
+    render();
+    document.addEventListener('cart:updated', render);
+    document.addEventListener('shopify:section:load', render);
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Cart stock warnings",
+  "target": "section",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Inventory rules"
+    },
+    {
+      "type": "number",
+      "id": "low_stock_threshold",
+      "label": "Low-stock threshold",
+      "default": 10,
+      "info": "Cart items with tracked inventory at or below this number show a warning."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_low_stock",
+      "label": "Show low-stock warnings",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_sold_out",
+      "label": "Show sold-out warnings",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Messages"
+    },
+    {
+      "type": "text",
+      "id": "low_stock_text",
+      "label": "Low-stock text",
+      "default": "Only [count] left",
+      "info": "Use [count] for the cart item's real variant inventory."
+    },
+    {
+      "type": "text",
+      "id": "sold_out_text",
+      "label": "Sold-out text",
+      "default": "Sold out"
+    },
+    {
+      "type": "header",
+      "content": "Appearance"
+    },
+    {
+      "type": "range",
+      "id": "font_size",
+      "min": 11,
+      "max": 18,
+      "step": 1,
+      "unit": "px",
+      "label": "Font size",
+      "default": 13
+    },
+    {
+      "type": "range",
+      "id": "corner_radius",
+      "min": 0,
+      "max": 24,
+      "step": 1,
+      "unit": "px",
+      "label": "Corner radius",
+      "default": 999
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Low-stock background",
+      "default": "#fff4f4"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Low-stock text",
+      "default": "#8e1f1f"
+    },
+    {
+      "type": "color",
+      "id": "warning_color",
+      "label": "Pulse color",
+      "default": "#d72c0d"
+    },
+    {
+      "type": "color",
+      "id": "sold_out_background",
+      "label": "Sold-out background",
+      "default": "#111827"
+    },
+    {
+      "type": "color",
+      "id": "sold_out_text_color",
+      "label": "Sold-out text",
+      "default": "#ffffff"
+    }
+  ]
+}
+{% endschema %}
