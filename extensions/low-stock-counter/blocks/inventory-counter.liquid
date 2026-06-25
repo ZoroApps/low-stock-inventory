@@ -224,6 +224,55 @@
   {% endif %}
 </div>
 
+{% if collection != blank %}
+  <script type="application/json" data-zoro-collection-products="{{ block.id }}">
+    [
+      {% for card_product in collection.products %}
+        {% liquid
+          assign card_variant = card_product.selected_or_first_available_variant
+          assign card_tracked = false
+          if card_variant.inventory_management != blank and card_variant.inventory_policy != 'continue'
+            assign card_tracked = true
+          endif
+        %}
+        {
+          "handle": {{ card_product.handle | json }},
+          "title": {{ card_product.title | json }},
+          "available": {{ card_product.available | json }},
+          "variantAvailable": {{ card_variant.available | json }},
+          "quantity": {{ card_variant.inventory_quantity | json }},
+          "tracked": {{ card_tracked | json }}
+        }{% unless forloop.last %},{% endunless %}
+      {% endfor %}
+    ]
+  </script>
+{% endif %}
+
+{% if cart != blank and request.page_type == 'cart' %}
+  <script type="application/json" data-zoro-cart-items="{{ block.id }}">
+    [
+      {% for item in cart.items %}
+        {% liquid
+          assign cart_variant = item.variant
+          assign cart_tracked = false
+          if cart_variant.inventory_management != blank and cart_variant.inventory_policy != 'continue'
+            assign cart_tracked = true
+          endif
+        %}
+        {
+          "key": {{ item.key | json }},
+          "title": {{ item.product.title | json }},
+          "url": {{ item.url | json }},
+          "variantId": {{ cart_variant.id | json }},
+          "available": {{ cart_variant.available | json }},
+          "quantity": {{ cart_variant.inventory_quantity | json }},
+          "tracked": {{ cart_tracked | json }}
+        }{% unless forloop.last %},{% endunless %}
+      {% endfor %}
+    ]
+  </script>
+{% endif %}
+
 <style>
   #LowStockCounter-{{ block.id }} {
     box-sizing: border-box;
@@ -355,6 +404,41 @@
   @media (min-width: 750px) {
     #LowStockCounter-{{ block.id }}.zoro-stock--hide-desktop { display: none !important; }
   }
+  .zoro-adaptive-stock-badge-{{ block.id }} {
+    display: inline-flex;
+    align-items: center;
+    gap: .38rem;
+    width: fit-content;
+    max-width: 100%;
+    margin-top: .45rem;
+    padding: .32rem .55rem;
+    border-radius: 20px;
+    color: {{ block.settings.text_color }};
+    background: {{ block.settings.background_color }};
+    font-family: var(--font-body-family, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+    font-size: {{ block.settings.font_size }}px;
+    font-weight: 700;
+    line-height: 1.25;
+  }
+  .zoro-adaptive-stock-badge-{{ block.id }}::before {
+    content: "";
+    width: .45rem;
+    height: .45rem;
+    border-radius: 50%;
+    background: {{ block.settings.warning_color }};
+    animation: zoro-adaptive-pulse-{{ block.id }} 1.55s ease-out infinite;
+  }
+  .zoro-adaptive-stock-badge-{{ block.id }}[data-state="sold-out"] {
+    color: {{ block.settings.badge_text_color }};
+    background: {{ block.settings.badge_background }};
+  }
+  @keyframes zoro-adaptive-pulse-{{ block.id }} {
+    0% { box-shadow: 0 0 0 0 color-mix(in srgb, {{ block.settings.warning_color }} 44%, transparent); transform: scale(.9); }
+    80%, 100% { box-shadow: 0 0 0 .5rem transparent; transform: scale(1); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .zoro-adaptive-stock-badge-{{ block.id }}::before { animation: none; }
+  }
 </style>
 
 <script>
@@ -379,6 +463,7 @@
     const showProgress = root.dataset.showProgress === 'true';
     const targetEligible = root.dataset.targetEligible === 'true';
     const variants = JSON.parse(source?.textContent || '[]');
+    const pageType = root.dataset.pageType;
     let updateTimer;
 
     const text = (template, count) =>
@@ -421,13 +506,13 @@
 
     const update = (event) => {
       if (!targetEligible) {
-        if (designMode) show(root.dataset.targetMessage || 'This product does not match the targeting rule.');
+        if (designMode && variants.length) show(root.dataset.targetMessage || 'This product does not match the targeting rule.');
         else hide();
         return;
       }
 
       if (!variants.length) {
-        if (designMode) show(root.dataset.editorMessage || 'Place this block on a product template.');
+        if (designMode && pageType === 'product') show(root.dataset.editorMessage || 'Place this block on a product template.');
         else hide();
         return;
       }
@@ -539,57 +624,448 @@
   })();
 </script>
 
+<script>
+  (() => {
+    const root = document.getElementById('LowStockCounter-{{ block.id }}');
+    if (!root || root.dataset.adaptiveReady === 'true') return;
+    root.dataset.adaptiveReady = 'true';
+
+    const collectionSource = document.querySelector('[data-zoro-collection-products="{{ block.id }}"]');
+    const cartSource = document.querySelector('[data-zoro-cart-items="{{ block.id }}"]');
+    const threshold = Math.max(1, Number(root.dataset.threshold) || 10);
+    const showSoldOut = root.dataset.showSoldOut === 'true';
+    const displayMode = root.dataset.displayMode || 'always';
+    const countDisplay = root.dataset.countDisplay || 'exact';
+    const badgeClass = 'zoro-adaptive-stock-badge-{{ block.id }}';
+
+    const copy = (template, count) => (template || '').split('[count]').join(String(count));
+    const badgeFor = (item) => {
+      const quantity = Number(item.quantity);
+      if ((!item.available || item.variantAvailable === false) && showSoldOut) {
+        return { copy: root.dataset.soldOutMessage || 'Sold out', state: 'sold-out' };
+      }
+      if (item.tracked && Number.isFinite(quantity)) {
+        if (displayMode === 'low_only' && quantity > threshold) return null;
+        const message = countDisplay === 'exact'
+          ? copy(root.dataset.lowMessage, quantity)
+          : root.dataset.generalMessage;
+        return { copy: message, state: 'low' };
+      }
+      if (root.dataset.showUntracked === 'true') {
+        return { copy: root.dataset.untrackedMessage, state: 'low' };
+      }
+      return null;
+    };
+
+    const makeBadge = (key, badge) => {
+      const node = document.createElement('span');
+      node.className = badgeClass;
+      node.dataset.zoroAdaptiveStock = key;
+      node.dataset.state = badge.state;
+      node.textContent = badge.copy;
+      return node;
+    };
+
+    const productCardFor = (handle) => {
+      const anchors = [...document.querySelectorAll(`a[href*="/products/${CSS.escape(handle)}"]`)];
+      for (const anchor of anchors) {
+        const card = anchor.closest('.card-wrapper, .card, .grid__item, li, article, product-card');
+        if (card && !card.contains(root)) return card;
+      }
+      return null;
+    };
+
+    const cartLineFor = (item) => {
+      const selectors = [
+        `[href*="variant=${CSS.escape(String(item.variantId))}"]`,
+        `[href="${CSS.escape(item.url)}"]`,
+        `[href*="${CSS.escape((item.url || '').split('?')[0])}"]`
+      ];
+      for (const selector of selectors) {
+        const anchor = document.querySelector(selector);
+        const line = anchor?.closest('.cart-item, .cart__row, tr, li, article, [data-cart-item]');
+        if (line && !line.contains(root)) return line;
+      }
+      return null;
+    };
+
+    const placeBadge = (target, key, badge, selector) => {
+      if (!target || target.querySelector(`[data-zoro-adaptive-stock="${key}"]`)) return false;
+      const anchor = target.querySelector(selector);
+      (anchor || target).insertAdjacentElement('afterend', makeBadge(key, badge));
+      return true;
+    };
+
+    const renderCollection = () => {
+      if (!collectionSource) return;
+      const products = JSON.parse(collectionSource.textContent || '[]');
+      products.forEach((product) => {
+        const badge = badgeFor(product);
+        if (!badge) return;
+        placeBadge(
+          productCardFor(product.handle),
+          '{{ block.id }}-collection-' + product.handle,
+          badge,
+          '.card__heading, .card-information, h3, h2, .product-card__title'
+        );
+      });
+    };
+
+    const renderCart = () => {
+      if (!cartSource) return;
+      const items = JSON.parse(cartSource.textContent || '[]');
+      items.forEach((item) => {
+        const badge = badgeFor(item);
+        if (!badge) return;
+        placeBadge(
+          cartLineFor(item),
+          '{{ block.id }}-cart-' + item.key,
+          badge,
+          '.cart-item__details, .cart-item__name, .cart__meta, td, h3, a'
+        );
+      });
+    };
+
+    renderCollection();
+    renderCart();
+    document.addEventListener('shopify:section:load', () => {
+      renderCollection();
+      renderCart();
+    });
+    document.addEventListener('cart:updated', renderCart);
+  })();
+</script>
+
 {% schema %}
 {
   "name": "Low stock counter",
   "target": "section",
   "settings": [
-    {"type":"header","content":"Inventory rules"},
-    {"type":"number","id":"low_stock_threshold","label":"Low-stock threshold","default":10,"info":"Used only when Visibility is Only when stock is low. This does not set the inventory count."},
-    {"type":"select","id":"display_mode","label":"Visibility","default":"always","options":[{"value":"always","label":"Always show real inventory"},{"value":"low_only","label":"Only when stock is low"}]},
-    {"type":"select","id":"count_display","label":"Tracked inventory display","default":"exact","options":[{"value":"exact","label":"Show exact count"},{"value":"general","label":"Show general message"}]},
-    {"type":"checkbox","id":"show_untracked","label":"Show message for untracked inventory","default":true},
-    {"type":"checkbox","id":"show_sold_out","label":"Show sold-out message","default":true},
-    {"type":"checkbox","id":"show_sold_out_badge","label":"Show sold-out badge","default":true},
-    {"type":"text","id":"sold_out_badge_text","label":"Sold-out badge text","default":"Sold out"},
-    {"type":"header","content":"Add both to cart"},
-    {"type":"product","id":"companion_product","label":"Companion product","info":"Optional. Select a second product to offer with this product."},
-    {"type":"text","id":"companion_heading","label":"Offer heading","default":"Complete the set"},
-    {"type":"text","id":"add_both_text","label":"Button text","default":"Add both to cart"},
-    {"type":"text","id":"adding_text","label":"Loading text","default":"Adding..."},
-    {"type":"text","id":"added_text","label":"Success text","default":"Both items added"},
-    {"type":"text","id":"add_error_text","label":"Error text","default":"Could not add both items. Please try again."},
-    {"type":"select","id":"after_add","label":"After adding","default":"cart","options":[{"value":"cart","label":"Open cart"},{"value":"stay","label":"Stay on product page"}]},
-    {"type":"header","content":"Product targeting"},
-    {"type":"select","id":"target_rule","label":"Display on","default":"all","options":[{"value":"all","label":"All products"},{"value":"include_tag","label":"Products with tag"},{"value":"exclude_tag","label":"Products without tag"},{"value":"vendor","label":"Products from vendor"},{"value":"product_type","label":"Products of type"}]},
-    {"type":"text","id":"target_value","label":"Tag, vendor, or product type","info":"Required unless Display on is All products. Matching is not case-sensitive."},
-    {"type":"header","content":"Messages"},
-    {"type":"text","id":"alert_text","label":"Exact-count message","default":"Hurry! Only [count] items left in stock!","info":"Use [count] for the selected variant's real inventory."},
-    {"type":"text","id":"general_low_stock_text","label":"General low-stock message","default":"Low stock - order soon!"},
-    {"type":"text","id":"untracked_text","label":"Untracked inventory message","default":"Popular right now"},
-    {"type":"text","id":"sold_out_text","label":"Sold-out message","default":"This item is currently sold out."},
-    {"type":"text","id":"editor_help_text","label":"Wrong-template editor message","default":"Open a product template and place this block below the price."},
-    {"type":"select","id":"message_language","label":"Message language","default":"custom","options":[{"value":"custom","label":"Custom messages below"},{"value":"auto","label":"Storefront language automatically"},{"value":"en","label":"English"},{"value":"es","label":"Spanish"},{"value":"fr","label":"French"},{"value":"de","label":"German"}]},
-    {"type":"header","content":"Appearance"},
-    {"type":"select","id":"layout","label":"Layout","default":"card","options":[{"value":"card","label":"Card"},{"value":"compact","label":"Compact"},{"value":"text","label":"Text only"}]},
-    {"type":"checkbox","id":"show_progress","label":"Show progress bar","default":true},
-    {"type":"checkbox","id":"show_pulse","label":"Show pulsing indicator","default":true},
-    {"type":"select","id":"alignment","label":"Text alignment","default":"left","options":[{"value":"left","label":"Left"},{"value":"center","label":"Center"},{"value":"right","label":"Right"}]},
-    {"type":"checkbox","id":"show_on_mobile","label":"Show on mobile","default":true},
-    {"type":"checkbox","id":"show_on_desktop","label":"Show on desktop","default":true},
-    {"type":"range","id":"font_size","min":12,"max":20,"step":1,"unit":"px","label":"Font size","default":14},
-    {"type":"range","id":"mobile_font_size","min":12,"max":20,"step":1,"unit":"px","label":"Mobile font size","default":14},
-    {"type":"range","id":"corner_radius","min":0,"max":20,"step":1,"unit":"px","label":"Corner radius","default":8},
-    {"type":"range","id":"top_spacing","min":0,"max":40,"step":2,"unit":"px","label":"Space above","default":12},
-    {"type":"range","id":"progress_height","min":2,"max":10,"step":1,"unit":"px","label":"Progress bar height","default":4},
-    {"type":"color","id":"background_color","label":"Background","default":"#fff4f4"},
-    {"type":"color","id":"text_color","label":"Text","default":"#8e1f1f"},
-    {"type":"color","id":"warning_color","label":"Indicator and progress","default":"#d72c0d"},
-    {"type":"color","id":"track_color","label":"Progress track","default":"#f2c6c1"},
-    {"type":"color","id":"badge_background","label":"Sold-out badge background","default":"#8e1f1f"},
-    {"type":"color","id":"badge_text_color","label":"Sold-out badge text","default":"#ffffff"},
-    {"type":"color","id":"button_background","label":"Add-both button background","default":"#008060"},
-    {"type":"color","id":"button_text_color","label":"Add-both button text","default":"#ffffff"}
+    {
+      "type": "header",
+      "content": "Inventory rules"
+    },
+    {
+      "type": "number",
+      "id": "low_stock_threshold",
+      "label": "Low-stock threshold",
+      "default": 10,
+      "info": "Used only when Visibility is Only when stock is low. This does not set the inventory count."
+    },
+    {
+      "type": "select",
+      "id": "display_mode",
+      "label": "Visibility",
+      "default": "always",
+      "options": [
+        { "value": "always", "label": "Always show real inventory" },
+        { "value": "low_only", "label": "Only when stock is low" }
+      ]
+    },
+    {
+      "type": "select",
+      "id": "count_display",
+      "label": "Tracked inventory display",
+      "default": "exact",
+      "options": [
+        { "value": "exact", "label": "Show exact count" },
+        { "value": "general", "label": "Show general message" }
+      ]
+    },
+    {
+      "type": "checkbox",
+      "id": "show_untracked",
+      "label": "Show message for untracked inventory",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_sold_out",
+      "label": "Show sold-out message",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_sold_out_badge",
+      "label": "Show sold-out badge",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "sold_out_badge_text",
+      "label": "Sold-out badge text",
+      "default": "Sold out"
+    },
+    {
+      "type": "header",
+      "content": "Add both to cart"
+    },
+    {
+      "type": "product",
+      "id": "companion_product",
+      "label": "Companion product",
+      "info": "Optional. Select a second product to offer with this product."
+    },
+    {
+      "type": "text",
+      "id": "companion_heading",
+      "label": "Offer heading",
+      "default": "Complete the set"
+    },
+    {
+      "type": "text",
+      "id": "add_both_text",
+      "label": "Button text",
+      "default": "Add both to cart"
+    },
+    {
+      "type": "text",
+      "id": "adding_text",
+      "label": "Loading text",
+      "default": "Adding..."
+    },
+    {
+      "type": "text",
+      "id": "added_text",
+      "label": "Success text",
+      "default": "Both items added"
+    },
+    {
+      "type": "text",
+      "id": "add_error_text",
+      "label": "Error text",
+      "default": "Could not add both items. Please try again."
+    },
+    {
+      "type": "select",
+      "id": "after_add",
+      "label": "After adding",
+      "default": "cart",
+      "options": [
+        { "value": "cart", "label": "Open cart" },
+        { "value": "stay", "label": "Stay on product page" }
+      ]
+    },
+    {
+      "type": "header",
+      "content": "Product targeting"
+    },
+    {
+      "type": "select",
+      "id": "target_rule",
+      "label": "Display on",
+      "default": "all",
+      "options": [
+        { "value": "all", "label": "All products" },
+        { "value": "include_tag", "label": "Products with tag" },
+        { "value": "exclude_tag", "label": "Products without tag" },
+        { "value": "vendor", "label": "Products from vendor" },
+        { "value": "product_type", "label": "Products of type" }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "target_value",
+      "label": "Tag, vendor, or product type",
+      "info": "Required unless Display on is All products. Matching is not case-sensitive."
+    },
+    {
+      "type": "header",
+      "content": "Messages"
+    },
+    {
+      "type": "text",
+      "id": "alert_text",
+      "label": "Exact-count message",
+      "default": "Hurry! Only [count] items left in stock!",
+      "info": "Use [count] for the selected variant's real inventory."
+    },
+    {
+      "type": "text",
+      "id": "general_low_stock_text",
+      "label": "General low-stock message",
+      "default": "Low stock - order soon!"
+    },
+    {
+      "type": "text",
+      "id": "untracked_text",
+      "label": "Untracked inventory message",
+      "default": "Popular right now"
+    },
+    {
+      "type": "text",
+      "id": "sold_out_text",
+      "label": "Sold-out message",
+      "default": "This item is currently sold out."
+    },
+    {
+      "type": "text",
+      "id": "editor_help_text",
+      "label": "Wrong-template editor message",
+      "default": "Open a product template and place this block below the price."
+    },
+    {
+      "type": "select",
+      "id": "message_language",
+      "label": "Message language",
+      "default": "custom",
+      "options": [
+        { "value": "custom", "label": "Custom messages below" },
+        { "value": "auto", "label": "Storefront language automatically" },
+        { "value": "en", "label": "English" },
+        { "value": "es", "label": "Spanish" },
+        { "value": "fr", "label": "French" },
+        { "value": "de", "label": "German" }
+      ]
+    },
+    {
+      "type": "header",
+      "content": "Appearance"
+    },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "Layout",
+      "default": "card",
+      "options": [
+        { "value": "card", "label": "Card" },
+        { "value": "compact", "label": "Compact" },
+        { "value": "text", "label": "Text only" }
+      ]
+    },
+    {
+      "type": "checkbox",
+      "id": "show_progress",
+      "label": "Show progress bar",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_pulse",
+      "label": "Show pulsing indicator",
+      "default": true
+    },
+    {
+      "type": "select",
+      "id": "alignment",
+      "label": "Text alignment",
+      "default": "left",
+      "options": [
+        { "value": "left", "label": "Left" },
+        { "value": "center", "label": "Center" },
+        { "value": "right", "label": "Right" }
+      ]
+    },
+    {
+      "type": "checkbox",
+      "id": "show_on_mobile",
+      "label": "Show on mobile",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_on_desktop",
+      "label": "Show on desktop",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "font_size",
+      "min": 12,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "label": "Font size",
+      "default": 14
+    },
+    {
+      "type": "range",
+      "id": "mobile_font_size",
+      "min": 12,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "label": "Mobile font size",
+      "default": 14
+    },
+    {
+      "type": "range",
+      "id": "corner_radius",
+      "min": 0,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "label": "Corner radius",
+      "default": 8
+    },
+    {
+      "type": "range",
+      "id": "top_spacing",
+      "min": 0,
+      "max": 40,
+      "step": 2,
+      "unit": "px",
+      "label": "Space above",
+      "default": 12
+    },
+    {
+      "type": "range",
+      "id": "progress_height",
+      "min": 2,
+      "max": 10,
+      "step": 1,
+      "unit": "px",
+      "label": "Progress bar height",
+      "default": 4
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Background",
+      "default": "#fff4f4"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text",
+      "default": "#8e1f1f"
+    },
+    {
+      "type": "color",
+      "id": "warning_color",
+      "label": "Indicator and progress",
+      "default": "#d72c0d"
+    },
+    {
+      "type": "color",
+      "id": "track_color",
+      "label": "Progress track",
+      "default": "#f2c6c1"
+    },
+    {
+      "type": "color",
+      "id": "badge_background",
+      "label": "Sold-out badge background",
+      "default": "#8e1f1f"
+    },
+    {
+      "type": "color",
+      "id": "badge_text_color",
+      "label": "Sold-out badge text",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "button_background",
+      "label": "Add-both button background",
+      "default": "#008060"
+    },
+    {
+      "type": "color",
+      "id": "button_text_color",
+      "label": "Add-both button text",
+      "default": "#ffffff"
+    }
   ]
 }
 {% endschema %}
