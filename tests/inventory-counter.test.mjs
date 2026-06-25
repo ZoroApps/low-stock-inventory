@@ -44,6 +44,8 @@ test('embedded JavaScript has valid syntax after Liquid ID replacement', () => {
 test('counter remains backendless and uses Shopify inventory and cart APIs', () => {
   assert.match(block, /variant\.inventory_quantity/);
   assert.match(block, /variant\.inventory_management/);
+  assert.match(block, /collection\.products/);
+  assert.match(block, /cart\.items/);
   assert.match(block, /fetch\(`\$\{base\}cart\/add\.js`/);
   assert.match(block, /items:\s*\[\s*\{\s*id:\s*currentId,\s*quantity:\s*1\s*\},\s*\{\s*id:\s*companionId,\s*quantity:\s*1\s*\}/);
   assert.doesNotMatch(block, /https?:\/\/[^'"]+/);
@@ -77,8 +79,18 @@ test('language selector exposes automatic and explicit languages', () => {
 test('visibility supports always-on real inventory and low-stock-only modes', () => {
   assert.match(block, /data-display-mode/);
   assert.match(block, /displayMode === 'low_only'/);
+  assert.match(block, /variants\.length\) show\(root\.dataset\.targetMessage/);
+  assert.match(block, /pageType === 'product'/);
   assert.match(block, /"value":\s*"always"/);
   assert.match(block, /"value":\s*"low_only"/);
+});
+
+test('main low stock block adapts to collection and cart pages', () => {
+  assert.match(block, /data-zoro-collection-products="{{ block\.id }}"/);
+  assert.match(block, /data-zoro-cart-items="{{ block\.id }}"/);
+  assert.match(block, /productCardFor\(product\.handle\)/);
+  assert.match(block, /cartLineFor\(item\)/);
+  assert.match(block, /zoro-adaptive-stock-badge-{{ block\.id }}/);
 });
 
 test('all locale files contain required storefront keys', () => {
