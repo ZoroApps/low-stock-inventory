@@ -266,6 +266,7 @@
   }
   #LowStockCounter-{{ block.id }}[hidden] { display: none; }
   #LowStockCounter-{{ block.id }}[data-card-mode="true"] { display: none !important; }
+  [data-zoro-adaptive-stock*="{{ block.id }}-current-"] { display: none !important; }
   #LowStockCounter-{{ block.id }}[data-product-placement="price"] {
     width: 100%;
     max-width: 100%;
@@ -1221,6 +1222,12 @@
       productPriceBadge = null;
     };
 
+    const removeCurrentProductOverlay = () => {
+      document
+        .querySelectorAll(`[data-zoro-adaptive-stock*="{{ block.id }}-current-"]`)
+        .forEach((node) => node.remove());
+    };
+
     const clearInline = () => {
       if (!adaptiveList) return;
       adaptiveList.replaceChildren();
@@ -1794,6 +1801,7 @@
     };
 
     const renderProductPageOverlay = () => {
+      removeCurrentProductOverlay();
       const item = currentProductItem();
       if (!item) {
         removeProductPriceBadge();
@@ -1808,6 +1816,7 @@
       }
 
       renderProductPriceBadge(badge);
+      removeCurrentProductOverlay();
       hideProductInline();
     };
 
@@ -1872,6 +1881,7 @@
     renderProductPageOverlay();
     renderRelatedProducts();
     document.addEventListener('shopify:section:load', () => {
+      removeCurrentProductOverlay();
       renderCollection();
       renderCart();
       renderProductPageOverlay();
