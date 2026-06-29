@@ -866,14 +866,14 @@
       node.classList.add('zoro-stock--floating-purchase');
 
       const box = target.node.getBoundingClientRect();
+      const columnBox = purchaseColumnBox() || box;
       const gap = 8;
       const portalBox = node.getBoundingClientRect();
-      const width = Math.max(160, Math.min(box.width, window.innerWidth - 24));
-      const left = Math.max(12, Math.min(box.left + window.scrollX, window.scrollX + window.innerWidth - width - 12));
-      const top = Math.max(
-        window.scrollY + 12,
-        box.top + window.scrollY - portalBox.height - gap
-      );
+      const width = Math.max(160, Math.min(columnBox.width, window.innerWidth - 24));
+      const left = Math.max(12, Math.min(columnBox.left + window.scrollX, window.scrollX + window.innerWidth - width - 12));
+      const top = target.mode === 'before'
+        ? Math.max(window.scrollY + 12, box.top + window.scrollY - portalBox.height - gap)
+        : box.bottom + window.scrollY + gap;
       node.style.setProperty('--zoro-floating-width', `${width}px`);
       node.style.left = `${left}px`;
       node.style.top = `${top}px`;
@@ -944,27 +944,35 @@
       if (pageType !== 'product') return;
       [40, 160, 420, 900, 1800, 3200, 5200, 8000].forEach((delay) => {
         window.setTimeout(() => {
-          if (placeRootNearProductPrice()) {
-            if (portal) portal.hidden = true;
-            inventory.hidden = false;
-            root.hidden = false;
+          if (lastPortalRender) {
+            renderProductPortal(
+              lastPortalRender.copy,
+              lastPortalRender.count,
+              lastPortalRender.progressVisible,
+              lastPortalRender.soldOut
+            );
           }
         }, delay);
       });
     };
 
     const show = (copy, count = 0, progressVisible = false, soldOut = false) => {
-      if (pageType === 'product') {
-        if (portal) portal.hidden = true;
-        placeRootNearProductPrice();
-        retryProductPlacement();
-      }
       message.textContent = copy;
-      inventory.hidden = false;
       if (soldOutBadge) soldOutBadge.hidden = !soldOut;
       progress.hidden = !showProgress || !progressVisible;
       progress.setAttribute('aria-valuenow', String(count));
       fill.style.width = `${Math.min(100, Math.max(0, count / threshold * 100))}%`;
+
+      if (pageType === 'product') {
+        root.dataset.cardMode = 'true';
+        inventory.hidden = true;
+        root.hidden = true;
+        renderProductPortal(copy, count, progressVisible, soldOut);
+        retryProductPlacement();
+        return;
+      }
+
+      inventory.hidden = false;
       root.hidden = false;
     };
 
