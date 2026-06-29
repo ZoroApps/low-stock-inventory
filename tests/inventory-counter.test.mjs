@@ -131,7 +131,9 @@ test('main low stock block adapts to collection and cart pages', () => {
   assert.match(block, /productVisiblePriceTarget/);
   assert.match(block, /exactCurrentPriceTarget/);
   assert.match(block, /retryProductPlacement/);
-  assert.match(block, /const price = exactCurrentPriceTarget\(\) \|\| visiblePriceTarget\(\);\s*if \(price\) return price;\s*const purchase = purchaseTarget\(\);\s*if \(purchase\) return purchase/);
+  assert.match(block, /const purchase = purchaseTarget\(\);\s*if \(purchase\) return purchase;\s*const price = visiblePriceTarget\(\) \|\| exactCurrentPriceTarget\(\);\s*if \(price\) return price/);
+  assert.match(block, /\[data-product-placement="price"\]/);
+  assert.match(block, /overflow-wrap: anywhere/);
   assert.match(block, /const portalTarget = \(\) => exactCurrentPriceTarget\(\) \|\| visiblePriceTarget\(\) \|\| purchaseTarget\(\)/);
   assert.match(block, /const purchase = productPurchaseTarget\(\);\s*if \(purchase\?\.node\) return purchase\.node/);
   assert.match(block, /LowStockCounterPortal-{{ block\.id }}/);
