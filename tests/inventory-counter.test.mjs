@@ -149,7 +149,8 @@ test('main low stock block adapts to collection and cart pages', () => {
   assert.match(block, /node\.style\.top = `\$\{top\}px`/);
   assert.match(block, /data-zoro-portal-message/);
   assert.match(block, /lastPortalRender = \{ copy, count, progressVisible, soldOut \}/);
-  assert.match(block, /if \(pageType === 'product'\) \{\s*if \(portal\) portal\.hidden = true;\s*placeRootNearProductPrice\(\);\s*retryProductPlacement\(\);/);
+  assert.match(block, /if \(pageType === 'product'\) \{\s*root\.dataset\.cardMode = 'true';\s*inventory\.hidden = true;\s*root\.hidden = true;\s*renderProductPortal\(copy, count, progressVisible, soldOut\);\s*retryProductPlacement\(\);\s*return;/);
+  assert.match(block, /if \(lastPortalRender\) \{\s*renderProductPortal\(/);
   assert.match(block, /root\.hidden = false/);
   assert.match(block, /root\.dataset\.productPlacement = 'price'/);
   assert.match(block, /root\.dataset\.productPlacement = 'portal'/);
