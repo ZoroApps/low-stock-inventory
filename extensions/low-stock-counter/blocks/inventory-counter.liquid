@@ -824,20 +824,22 @@
       const target = portalTarget();
       if (!node || !target?.node || target.node.contains(node)) return false;
 
-      node.classList.remove('zoro-stock--floating-purchase');
-      node.style.removeProperty('--zoro-floating-width');
-      node.style.removeProperty('left');
-      node.style.removeProperty('top');
       const previousHidden = node.hidden;
       node.hidden = false;
+      node.classList.add('zoro-stock--floating-purchase');
 
-      if (target.mode === 'before') {
-        if (target.node.previousElementSibling !== node) {
-          target.node.insertAdjacentElement('beforebegin', node);
-        }
-      } else if (target.node.nextElementSibling !== node) {
-        target.node.insertAdjacentElement('afterend', node);
-      }
+      const box = target.node.getBoundingClientRect();
+      const gap = 8;
+      const portalBox = node.getBoundingClientRect();
+      const width = Math.max(160, Math.min(box.width, window.innerWidth - 24));
+      const left = Math.max(12, Math.min(box.left + window.scrollX, window.scrollX + window.innerWidth - width - 12));
+      const top = Math.max(
+        window.scrollY + 12,
+        box.top + window.scrollY - portalBox.height - gap
+      );
+      node.style.setProperty('--zoro-floating-width', `${width}px`);
+      node.style.left = `${left}px`;
+      node.style.top = `${top}px`;
 
       node.hidden = previousHidden;
       return true;
@@ -874,6 +876,7 @@
             </div>
           </div>
         `;
+        document.body.appendChild(portal);
       }
 
       return portal;
