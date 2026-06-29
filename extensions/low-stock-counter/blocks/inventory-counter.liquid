@@ -818,7 +818,7 @@
       return true;
     };
 
-    const portalTarget = () => exactCurrentPriceTarget() || visiblePriceTarget() || purchaseTarget();
+    const portalTarget = () => purchaseTarget() || exactCurrentPriceTarget() || visiblePriceTarget();
 
     const positionProductPortal = (node) => {
       const target = portalTarget();
