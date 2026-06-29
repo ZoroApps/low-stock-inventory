@@ -265,6 +265,14 @@
     font-size: var(--zoro-size);
   }
   #LowStockCounter-{{ block.id }}[hidden] { display: none; }
+  #LowStockCounter-{{ block.id }}[data-product-placement="price"] {
+    width: 100%;
+    max-width: 100%;
+    margin-top: .75rem;
+    margin-bottom: .75rem;
+    clear: both;
+    align-self: stretch;
+  }
   #LowStockCounterPortal-{{ block.id }}[hidden] { display: none; }
   #LowStockCounterPortal-{{ block.id }} {
     box-sizing: border-box;
@@ -472,6 +480,18 @@
   @media (max-width: 749px) {
     #LowStockCounter-{{ block.id }} { font-size: var(--zoro-mobile-size); }
     #LowStockCounter-{{ block.id }}.zoro-stock--hide-mobile { display: none !important; }
+    #LowStockCounter-{{ block.id }}[data-product-placement="price"] {
+      display: block;
+      width: 100%;
+      min-width: 0;
+      margin-left: 0;
+      margin-right: 0;
+      overflow-wrap: anywhere;
+    }
+    #LowStockCounter-{{ block.id }}[data-product-placement="price"] .zoro-stock__alert {
+      justify-content: flex-start;
+      text-align: left;
+    }
     #LowStockCounter-{{ block.id }} .zoro-stock__pair { grid-template-columns: auto minmax(0, 1fr); }
     #LowStockCounter-{{ block.id }} .zoro-stock__pair-button { grid-column: 1 / -1; width: 100%; }
   }
@@ -727,11 +747,11 @@
     };
 
     const productPriceTarget = () => {
-      const price = exactCurrentPriceTarget() || visiblePriceTarget();
-      if (price) return price;
-
       const purchase = purchaseTarget();
       if (purchase) return purchase;
+
+      const price = visiblePriceTarget() || exactCurrentPriceTarget();
+      if (price) return price;
 
       const container = productInfoContainer();
       const selectors = [
