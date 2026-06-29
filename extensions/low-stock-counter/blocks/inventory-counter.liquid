@@ -577,9 +577,6 @@
       root.hidden = inventory.hidden && !pair;
     };
 
-    const productForm = () =>
-      document.querySelector('form[action*="/cart/add"]');
-
     const visibleBox = (node) => {
       const box = node?.getBoundingClientRect?.();
       if (!box || box.width < 1 || box.height < 1) return null;
@@ -595,6 +592,28 @@
         .replace(/\s+/g, ' ')
         .trim()
         .toLowerCase();
+
+    const productForm = () => {
+      const forms = [...document.querySelectorAll('form[action*="/cart/add"]')]
+        .filter((form) => !root.contains(form) && visibleBox(form))
+        .map((form) => {
+          const box = form.getBoundingClientRect();
+          const copy = purchaseCopy(form);
+          return {
+            form,
+            priority: /add to cart|buy it now|sold out/.test(copy) ? 0 : 1,
+            left: box.left,
+            top: box.top
+          };
+        })
+        .sort((left, right) =>
+          (left.priority - right.priority)
+          || (right.left - left.left)
+          || (left.top - right.top)
+        );
+
+      return forms[0]?.form || null;
+    };
 
     const purchaseShell = (node) =>
       node.closest?.([
@@ -680,6 +699,16 @@
       const price = (root.dataset.currentPrice || '').replace(/\s+/g, ' ').trim();
       const needles = [money, price].filter(Boolean);
       if (!needles.length) return null;
+      const purchaseBox = visibleBox(purchaseTarget()?.node);
+      const nearPurchase = (node) => {
+        if (!purchaseBox) return true;
+        const box = visibleBox(node);
+        if (!box || box.bottom > purchaseBox.top + 48) return false;
+        const overlap = Math.min(box.right, purchaseBox.right) - Math.max(box.left, purchaseBox.left);
+        const centerDistance = Math.abs((box.left + box.right) / 2 - (purchaseBox.left + purchaseBox.right) / 2);
+        return overlap > Math.min(box.width, purchaseBox.width) * 0.12
+          || centerDistance < Math.max(box.width, purchaseBox.width);
+      };
       const priceScore = (node) => {
         const box = node.getBoundingClientRect();
         const copy = (node.textContent || '').replace(/\s+/g, ' ').trim();
@@ -709,7 +738,7 @@
           const box = visibleBox(node);
           if (!box) return false;
           const copy = (node.textContent || '').replace(/\s+/g, ' ').trim();
-          return needles.some((needle) => copy === needle || copy.includes(needle));
+          return nearPurchase(node) && needles.some((needle) => copy === needle || copy.includes(needle));
         })
         .sort((left, right) => {
           const a = priceScore(left);
@@ -1283,8 +1312,30 @@
         '[class*="quantity"]'
       ].join(', ')) || node;
 
+    const productFormTarget = () => {
+      const forms = [...document.querySelectorAll('form[action*="/cart/add"]')]
+        .filter((form) => !root.contains(form) && visibleBox(form))
+        .map((form) => {
+          const box = form.getBoundingClientRect();
+          const copy = purchaseCopy(form);
+          return {
+            form,
+            priority: /add to cart|buy it now|sold out/.test(copy) ? 0 : 1,
+            left: box.left,
+            top: box.top
+          };
+        })
+        .sort((left, right) =>
+          (left.priority - right.priority)
+          || (right.left - left.left)
+          || (left.top - right.top)
+        );
+
+      return forms[0]?.form || null;
+    };
+
     const productInfoContainer = () => {
-      const form = document.querySelector('form[action*="/cart/add"]');
+      const form = productFormTarget();
       const purchase = productPurchaseTarget()?.node;
       return form?.closest([
         'product-info',
@@ -1304,7 +1355,7 @@
     };
 
     const productPurchaseTarget = () => {
-      const form = document.querySelector('form[action*="/cart/add"]');
+      const form = productFormTarget();
       if (visibleBox(form)) return { node: form, mode: 'before' };
 
       const buttons = [...document.querySelectorAll([
