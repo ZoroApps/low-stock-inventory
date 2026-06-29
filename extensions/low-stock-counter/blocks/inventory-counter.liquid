@@ -593,9 +593,51 @@
         .trim()
         .toLowerCase();
 
+    const purchaseButtons = () => [...document.querySelectorAll([
+        'button',
+        'input[type="submit"]',
+        'a',
+        '[role="button"]',
+        '[name="add"]',
+        '[class*="button"]',
+        '[class*="payment-button"]'
+      ].join(', '))]
+        .filter((button) => {
+          const copy = purchaseCopy(button);
+          return !root.contains(button) && visibleBox(button) && /add to cart|buy it now|sold out/.test(copy);
+        })
+        .sort((left, right) => {
+          const leftCopy = purchaseCopy(left);
+          const rightCopy = purchaseCopy(right);
+          const leftPriority = /add to cart|sold out/.test(leftCopy) ? 0 : 1;
+          const rightPriority = /add to cart|sold out/.test(rightCopy) ? 0 : 1;
+          const leftBox = left.getBoundingClientRect();
+          const rightBox = right.getBoundingClientRect();
+          return (leftPriority - rightPriority) || (rightBox.left - leftBox.left) || (leftBox.top - rightBox.top);
+        });
+
+    const purchaseColumnBox = () => {
+      const button = purchaseButtons()[0];
+      const buttonBox = visibleBox(button);
+      if (!buttonBox) return null;
+
+      const shell = purchaseShell(button);
+      const shellBox = visibleBox(shell);
+      if (shellBox && shellBox.width <= window.innerWidth * 0.62) return shellBox;
+
+      return buttonBox;
+    };
+
     const productForm = () => {
+      const columnBox = purchaseColumnBox();
       const forms = [...document.querySelectorAll('form[action*="/cart/add"]')]
-        .filter((form) => !root.contains(form) && visibleBox(form))
+        .filter((form) => {
+          const box = visibleBox(form);
+          if (!box || root.contains(form)) return false;
+          if (!columnBox) return true;
+          const overlap = Math.min(box.right, columnBox.right) - Math.max(box.left, columnBox.left);
+          return box.width <= window.innerWidth * 0.62 && overlap > columnBox.width * 0.5;
+        })
         .map((form) => {
           const box = form.getBoundingClientRect();
           const copy = purchaseCopy(form);
@@ -630,40 +672,26 @@
       const form = productForm();
       if (visibleBox(form)) return { node: form, mode: 'before' };
 
-      const buttons = [...document.querySelectorAll([
-        'button',
-        'input[type="submit"]',
-        'a',
-        '[role="button"]',
-        '[name="add"]',
-        '[class*="button"]',
-        '[class*="payment-button"]'
-      ].join(', '))]
-        .filter((button) => {
-          const copy = purchaseCopy(button);
-          return !root.contains(button) && visibleBox(button) && /add to cart|buy it now|sold out/.test(copy);
-        })
-        .sort((left, right) => {
-          const leftCopy = purchaseCopy(left);
-          const rightCopy = purchaseCopy(right);
-          const leftPriority = /add to cart|sold out/.test(leftCopy) ? 0 : 1;
-          const rightPriority = /add to cart|sold out/.test(rightCopy) ? 0 : 1;
-          const leftBox = left.getBoundingClientRect();
-          const rightBox = right.getBoundingClientRect();
-          return (leftPriority - rightPriority) || (rightBox.left - leftBox.left) || (leftBox.top - rightBox.top);
-        });
-      const purchaseButton = buttons[0];
+      const purchaseButton = purchaseButtons()[0];
       if (!purchaseButton) return null;
 
+      const shell = purchaseShell(purchaseButton);
+      const shellBox = visibleBox(shell);
+      if (shellBox && shellBox.width <= window.innerWidth * 0.62) {
+        return {
+          node: shell,
+          mode: 'before'
+        };
+      }
+
       return {
-        node: purchaseShell(purchaseButton),
+        node: purchaseButton,
         mode: 'before'
       };
     };
 
     const visiblePriceTarget = () => {
-      const purchase = purchaseTarget()?.node;
-      const purchaseBox = visibleBox(purchase);
+      const purchaseBox = purchaseColumnBox() || visibleBox(purchaseTarget()?.node);
       if (!purchaseBox) return null;
 
       const candidates = [...document.querySelectorAll([
@@ -702,7 +730,7 @@
       const price = (root.dataset.currentPrice || '').replace(/\s+/g, ' ').trim();
       const needles = [money, price].filter(Boolean);
       if (!needles.length) return null;
-      const purchaseBox = visibleBox(purchaseTarget()?.node);
+      const purchaseBox = purchaseColumnBox() || visibleBox(purchaseTarget()?.node);
       const nearPurchase = (node) => {
         if (!purchaseBox) return true;
         const box = visibleBox(node);
@@ -818,7 +846,7 @@
       return true;
     };
 
-    const portalTarget = () => purchaseTarget() || exactCurrentPriceTarget() || visiblePriceTarget();
+    const portalTarget = () => exactCurrentPriceTarget() || visiblePriceTarget() || purchaseTarget();
 
     const positionProductPortal = (node) => {
       const target = portalTarget();
@@ -1317,9 +1345,51 @@
         '[class*="quantity"]'
       ].join(', ')) || node;
 
+    const productPurchaseButtons = () => [...document.querySelectorAll([
+        'button',
+        'input[type="submit"]',
+        'a',
+        '[role="button"]',
+        '[name="add"]',
+        '[class*="button"]',
+        '[class*="payment-button"]'
+      ].join(', '))]
+        .filter((button) => {
+          const copy = purchaseCopy(button);
+          return !root.contains(button) && visibleBox(button) && /add to cart|buy it now|sold out/.test(copy);
+        })
+        .sort((left, right) => {
+          const leftCopy = purchaseCopy(left);
+          const rightCopy = purchaseCopy(right);
+          const leftPriority = /add to cart|sold out/.test(leftCopy) ? 0 : 1;
+          const rightPriority = /add to cart|sold out/.test(rightCopy) ? 0 : 1;
+          const leftBox = left.getBoundingClientRect();
+          const rightBox = right.getBoundingClientRect();
+          return (leftPriority - rightPriority) || (rightBox.left - leftBox.left) || (leftBox.top - rightBox.top);
+        });
+
+    const productPurchaseColumnBox = () => {
+      const button = productPurchaseButtons()[0];
+      const buttonBox = visibleBox(button);
+      if (!buttonBox) return null;
+
+      const shell = purchaseShell(button);
+      const shellBox = visibleBox(shell);
+      if (shellBox && shellBox.width <= window.innerWidth * 0.62) return shellBox;
+
+      return buttonBox;
+    };
+
     const productFormTarget = () => {
+      const columnBox = productPurchaseColumnBox();
       const forms = [...document.querySelectorAll('form[action*="/cart/add"]')]
-        .filter((form) => !root.contains(form) && visibleBox(form))
+        .filter((form) => {
+          const box = visibleBox(form);
+          if (!box || root.contains(form)) return false;
+          if (!columnBox) return true;
+          const overlap = Math.min(box.right, columnBox.right) - Math.max(box.left, columnBox.left);
+          return box.width <= window.innerWidth * 0.62 && overlap > columnBox.width * 0.5;
+        })
         .map((form) => {
           const box = form.getBoundingClientRect();
           const copy = purchaseCopy(form);
@@ -1363,40 +1433,26 @@
       const form = productFormTarget();
       if (visibleBox(form)) return { node: form, mode: 'before' };
 
-      const buttons = [...document.querySelectorAll([
-        'button',
-        'input[type="submit"]',
-        'a',
-        '[role="button"]',
-        '[name="add"]',
-        '[class*="button"]',
-        '[class*="payment-button"]'
-      ].join(', '))]
-        .filter((button) => {
-          const copy = purchaseCopy(button);
-          return !root.contains(button) && visibleBox(button) && /add to cart|buy it now|sold out/.test(copy);
-        })
-        .sort((left, right) => {
-          const leftCopy = purchaseCopy(left);
-          const rightCopy = purchaseCopy(right);
-          const leftPriority = /add to cart|sold out/.test(leftCopy) ? 0 : 1;
-          const rightPriority = /add to cart|sold out/.test(rightCopy) ? 0 : 1;
-          const leftBox = left.getBoundingClientRect();
-          const rightBox = right.getBoundingClientRect();
-          return (leftPriority - rightPriority) || (rightBox.left - leftBox.left) || (leftBox.top - rightBox.top);
-        });
-      const purchaseButton = buttons[0];
+      const purchaseButton = productPurchaseButtons()[0];
       if (!purchaseButton) return null;
 
+      const shell = purchaseShell(purchaseButton);
+      const shellBox = visibleBox(shell);
+      if (shellBox && shellBox.width <= window.innerWidth * 0.62) {
+        return {
+          node: shell,
+          mode: 'before'
+        };
+      }
+
       return {
-        node: purchaseShell(purchaseButton),
+        node: purchaseButton,
         mode: 'before'
       };
     };
 
     const productVisiblePriceTarget = () => {
-      const purchase = productPurchaseTarget()?.node;
-      const purchaseBox = visibleBox(purchase);
+      const purchaseBox = productPurchaseColumnBox() || visibleBox(productPurchaseTarget()?.node);
       if (!purchaseBox) return null;
 
       const candidates = [...document.querySelectorAll([
