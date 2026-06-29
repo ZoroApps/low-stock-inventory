@@ -136,7 +136,7 @@ test('main low stock block adapts to collection and cart pages', () => {
   assert.doesNotMatch(block, /const purchase = purchaseTarget\(\);\s*if \(purchase\) return purchase;/);
   assert.match(block, /\[data-product-placement="price"\]/);
   assert.match(block, /overflow-wrap: anywhere/);
-  assert.match(block, /const portalTarget = \(\) => exactCurrentPriceTarget\(\) \|\| visiblePriceTarget\(\)/);
+  assert.match(block, /const portalTarget = \(\) => purchaseTarget\(\) \|\| exactCurrentPriceTarget\(\) \|\| visiblePriceTarget\(\)/);
   assert.doesNotMatch(block, /const purchase = productPurchaseTarget\(\);\s*if \(purchase\?\.node\) return purchase\.node/);
   assert.match(block, /LowStockCounterPortal-{{ block\.id }}/);
   assert.match(block, /positionProductPortal/);
