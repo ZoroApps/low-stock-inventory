@@ -814,27 +814,27 @@
       return true;
     };
 
-    const portalTarget = () => exactCurrentPriceTarget() || visiblePriceTarget() || purchaseTarget();
+    const portalTarget = () => exactCurrentPriceTarget() || visiblePriceTarget();
 
     const positionProductPortal = (node) => {
       const target = portalTarget();
-      const box = visibleBox(target?.node);
-      if (!node || !box) return false;
+      if (!node || !target?.node || target.node.contains(node)) return false;
 
-      node.classList.add('zoro-stock--floating-purchase');
+      node.classList.remove('zoro-stock--floating-purchase');
+      node.style.removeProperty('--zoro-floating-width');
+      node.style.removeProperty('left');
+      node.style.removeProperty('top');
       const previousHidden = node.hidden;
       node.hidden = false;
 
-      const height = node.offsetHeight || 32;
-      const left = Math.max(8, Math.min(box.left + window.scrollX, window.scrollX + window.innerWidth - 228));
-      const width = Math.max(220, Math.min(box.width, window.innerWidth - box.left - 16));
-      const top = target.mode === 'before'
-        ? Math.max(8, box.top + window.scrollY - height - 10)
-        : Math.max(8, box.bottom + window.scrollY + 8);
+      if (target.mode === 'before') {
+        if (target.node.previousElementSibling !== node) {
+          target.node.insertAdjacentElement('beforebegin', node);
+        }
+      } else if (target.node.nextElementSibling !== node) {
+        target.node.insertAdjacentElement('afterend', node);
+      }
 
-      node.style.setProperty('--zoro-floating-width', `${width}px`);
-      node.style.left = `${left}px`;
-      node.style.top = `${top}px`;
       node.hidden = previousHidden;
       return true;
     };
@@ -870,11 +870,6 @@
             </div>
           </div>
         `;
-        document.body.appendChild(portal);
-      }
-
-      if (portal.parentElement !== document.body) {
-        document.body.appendChild(portal);
       }
 
       return portal;
@@ -915,17 +910,20 @@
     };
 
     const show = (copy, count = 0, progressVisible = false, soldOut = false) => {
-      placeRootNearProductPrice();
-      retryProductPlacement();
-      if (portal) portal.hidden = true;
-      const portalPlaced = false;
+      const portalPlaced = pageType === 'product'
+        ? renderProductPortal(copy, count, progressVisible, soldOut)
+        : false;
+      if (!portalPlaced) {
+        placeRootNearProductPrice();
+        retryProductPlacement();
+      }
       message.textContent = copy;
       inventory.hidden = portalPlaced && pageType === 'product' ? true : false;
       if (soldOutBadge) soldOutBadge.hidden = !soldOut;
       progress.hidden = !showProgress || !progressVisible;
       progress.setAttribute('aria-valuenow', String(count));
       fill.style.width = `${Math.min(100, Math.max(0, count / threshold * 100))}%`;
-      root.hidden = pageType === 'product' ? !placeRootNearProductPrice() : false;
+      root.hidden = pageType === 'product' ? true : false;
     };
 
     const hide = () => {
