@@ -747,11 +747,11 @@
     };
 
     const productPriceTarget = () => {
+      const price = exactCurrentPriceTarget() || visiblePriceTarget();
+      if (price) return price;
+
       const purchase = purchaseTarget();
       if (purchase) return purchase;
-
-      const price = visiblePriceTarget() || exactCurrentPriceTarget();
-      if (price) return price;
 
       const container = productInfoContainer();
       const selectors = [
@@ -1375,9 +1375,6 @@
     };
 
     const productPagePriceTarget = () => {
-      const purchase = productPurchaseTarget();
-      if (purchase?.node) return purchase.node;
-
       const visiblePrice = productVisiblePriceTarget();
       if (visiblePrice) return visiblePrice;
 
@@ -1393,6 +1390,9 @@
         const node = container?.querySelector(selector);
         if (node && !node.contains(root)) return node;
       }
+
+      const purchase = productPurchaseTarget();
+      if (purchase?.node) return purchase.node;
 
       const form = container?.querySelector('form[action*="/cart/add"]')
         || document.querySelector('form[action*="/cart/add"]');
