@@ -140,8 +140,10 @@ test('main low stock block adapts to collection and cart pages', () => {
   assert.doesNotMatch(block, /const purchase = productPurchaseTarget\(\);\s*if \(purchase\?\.node\) return purchase\.node/);
   assert.match(block, /LowStockCounterPortal-{{ block\.id }}/);
   assert.match(block, /positionProductPortal/);
-  assert.match(block, /node\.classList\.remove\('zoro-stock--floating-purchase'\)/);
-  assert.doesNotMatch(block, /document\.body\.appendChild\(portal\)/);
+  assert.match(block, /node\.classList\.add\('zoro-stock--floating-purchase'\)/);
+  assert.match(block, /document\.body\.appendChild\(portal\)/);
+  assert.match(block, /node\.style\.left = `\$\{left\}px`/);
+  assert.match(block, /node\.style\.top = `\$\{top\}px`/);
   assert.match(block, /data-zoro-portal-message/);
   assert.match(block, /lastPortalRender = \{ copy, count, progressVisible, soldOut \}/);
   assert.match(block, /const portalPlaced = pageType === 'product'\s*\?\s*renderProductPortal\(copy, count, progressVisible, soldOut\)\s*:\s*false/);
