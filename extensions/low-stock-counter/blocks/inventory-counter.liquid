@@ -680,10 +680,13 @@
           if (node === root || root.contains(node) || node.contains(root)) return false;
           const copy = (node.textContent || '').replace(/\s+/g, ' ').trim();
           if (!/[$£€]|(?:^|\s)(?:USD|CAD|AUD|GBP|EUR)(?:\s|$)|\d+[.,]\d{2}/.test(copy)) return false;
+          if (copy.length > 80) return false;
           const box = visibleBox(node);
           if (!box || box.bottom > purchaseBox.top + 24) return false;
           const overlap = Math.min(box.right, purchaseBox.right) - Math.max(box.left, purchaseBox.left);
-          return overlap > Math.min(box.width, purchaseBox.width) * 0.25;
+          const center = (box.left + box.right) / 2;
+          return overlap > Math.min(box.width, purchaseBox.width) * 0.25
+            || (center >= purchaseBox.left && center <= purchaseBox.right);
         })
         .sort((left, right) => {
           const leftBox = left.getBoundingClientRect();
@@ -705,9 +708,9 @@
         const box = visibleBox(node);
         if (!box || box.bottom > purchaseBox.top + 48) return false;
         const overlap = Math.min(box.right, purchaseBox.right) - Math.max(box.left, purchaseBox.left);
-        const centerDistance = Math.abs((box.left + box.right) / 2 - (purchaseBox.left + purchaseBox.right) / 2);
-        return overlap > Math.min(box.width, purchaseBox.width) * 0.12
-          || centerDistance < Math.max(box.width, purchaseBox.width);
+        const center = (box.left + box.right) / 2;
+        return overlap > Math.min(box.width, purchaseBox.width) * 0.25
+          || (center >= purchaseBox.left && center <= purchaseBox.right);
       };
       const priceScore = (node) => {
         const box = node.getBoundingClientRect();
@@ -738,6 +741,7 @@
           const box = visibleBox(node);
           if (!box) return false;
           const copy = (node.textContent || '').replace(/\s+/g, ' ').trim();
+          if (copy.length > 80) return false;
           return nearPurchase(node) && needles.some((needle) => copy === needle || copy.includes(needle));
         })
         .sort((left, right) => {
@@ -814,7 +818,7 @@
       return true;
     };
 
-    const portalTarget = () => exactCurrentPriceTarget() || visiblePriceTarget();
+    const portalTarget = () => exactCurrentPriceTarget() || visiblePriceTarget() || purchaseTarget();
 
     const positionProductPortal = (node) => {
       const target = portalTarget();
@@ -1406,10 +1410,13 @@
           if (node === root || root.contains(node) || node.contains(root)) return false;
           const copy = (node.textContent || '').replace(/\s+/g, ' ').trim();
           if (!/[$£€]|(?:^|\s)(?:USD|CAD|AUD|GBP|EUR)(?:\s|$)|\d+[.,]\d{2}/.test(copy)) return false;
+          if (copy.length > 80) return false;
           const box = visibleBox(node);
           if (!box || box.bottom > purchaseBox.top + 24) return false;
           const overlap = Math.min(box.right, purchaseBox.right) - Math.max(box.left, purchaseBox.left);
-          return overlap > Math.min(box.width, purchaseBox.width) * 0.25;
+          const center = (box.left + box.right) / 2;
+          return overlap > Math.min(box.width, purchaseBox.width) * 0.25
+            || (center >= purchaseBox.left && center <= purchaseBox.right);
         })
         .sort((left, right) => {
           const leftBox = left.getBoundingClientRect();
