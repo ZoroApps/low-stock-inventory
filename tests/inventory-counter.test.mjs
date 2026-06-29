@@ -158,6 +158,8 @@ test('main low stock block adapts to collection and cart pages', () => {
   assert.match(block, /zoro-adaptive-stock-badge--product-price/);
   assert.match(block, /renderProductPriceBadge\(badge\)/);
   assert.match(block, /positionProductPriceBadge/);
+  assert.match(block, /removeCurrentProductOverlay/);
+  assert.match(block, /\[data-zoro-adaptive-stock\*="\{\{ block\.id \}\}-current-"\] \{ display: none !important; \}/);
   assert.match(block, /#LowStockCounter-\{\{ block\.id \}\}\[data-card-mode="true"\] \{ display: none !important; \}/);
   assert.doesNotMatch(block, /productPageMedia/);
   assert.match(block, /hideProductInline/);
