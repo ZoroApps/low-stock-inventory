@@ -945,20 +945,18 @@
     };
 
     const show = (copy, count = 0, progressVisible = false, soldOut = false) => {
-      const portalPlaced = pageType === 'product'
-        ? renderProductPortal(copy, count, progressVisible, soldOut)
-        : false;
-      if (!portalPlaced) {
+      if (pageType === 'product') {
+        if (portal) portal.hidden = true;
         placeRootNearProductPrice();
         retryProductPlacement();
       }
       message.textContent = copy;
-      inventory.hidden = portalPlaced && pageType === 'product' ? true : false;
+      inventory.hidden = false;
       if (soldOutBadge) soldOutBadge.hidden = !soldOut;
       progress.hidden = !showProgress || !progressVisible;
       progress.setAttribute('aria-valuenow', String(count));
       fill.style.width = `${Math.min(100, Math.max(0, count / threshold * 100))}%`;
-      root.hidden = pageType === 'product' ? true : false;
+      root.hidden = false;
     };
 
     const hide = () => {
