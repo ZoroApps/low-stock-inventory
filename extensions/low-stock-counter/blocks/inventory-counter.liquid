@@ -310,7 +310,7 @@
     z-index: auto;
     width: 100%;
     max-width: 100%;
-    margin: 1rem 0 1.25rem;
+    margin: 1rem 0 1.75rem;
     pointer-events: auto;
   }
   #LowStockCounterPortal-{{ block.id }} .zoro-stock__alert {
@@ -556,9 +556,9 @@
     position: static;
     z-index: auto;
     display: flex;
-    width: fit-content;
+    width: 100%;
     max-width: 100%;
-    margin: 1rem 0 1.25rem;
+    margin: 1rem 0 1.75rem;
     pointer-events: auto;
   }
   @keyframes zoro-adaptive-pulse-{{ block.id }} {
@@ -1881,21 +1881,7 @@
 
     const renderProductPageOverlay = () => {
       removeCurrentProductOverlay();
-      const item = currentProductItem();
-      if (!item) {
-        removeProductPriceBadge();
-        return;
-      }
-
-      const badge = badgeFor(item);
-      if (!badge) {
-        removeProductPriceBadge();
-        hideProductInline();
-        return;
-      }
-
-      renderProductPriceBadge(badge);
-      removeCurrentProductOverlay();
+      removeProductPriceBadge();
       hideProductInline();
     };
 
