@@ -305,6 +305,14 @@
     margin: 0;
     pointer-events: none;
   }
+  #LowStockCounterPortal-{{ block.id }}.zoro-stock--inline-price {
+    position: static;
+    z-index: auto;
+    width: 100%;
+    max-width: 100%;
+    margin: 1rem 0 1.25rem;
+    pointer-events: auto;
+  }
   #LowStockCounterPortal-{{ block.id }} .zoro-stock__alert {
     display: flex;
     align-items: center;
@@ -941,6 +949,30 @@
       if (portalBadge) portalBadge.hidden = !soldOut;
       portalProgress.hidden = !showProgress || !progressVisible;
       portalFill.style.width = `${Math.min(100, Math.max(0, count / threshold * 100))}%`;
+
+      const inlineTarget = productPriceTarget();
+      if (inlineTarget?.node && !inlineTarget.node.contains(node)) {
+        node.classList.remove('zoro-stock--floating-purchase');
+        node.classList.add('zoro-stock--inline-price');
+        node.style.removeProperty('--zoro-floating-width');
+        node.style.removeProperty('left');
+        node.style.removeProperty('top');
+        if (inlineTarget.mode === 'before') {
+          if (inlineTarget.node.previousElementSibling !== node) {
+            inlineTarget.node.insertAdjacentElement('beforebegin', node);
+          }
+        } else if (inlineTarget.node.nextElementSibling !== node) {
+          inlineTarget.node.insertAdjacentElement('afterend', node);
+        }
+        node.hidden = false;
+        if (isVisible(node)) {
+          root.dataset.productPlacement = 'price';
+          return true;
+        }
+      }
+
+      node.classList.remove('zoro-stock--inline-price');
+      if (!document.body.contains(node)) document.body.appendChild(node);
       if (!positionProductPortal(node)) {
         node.hidden = true;
         return false;
