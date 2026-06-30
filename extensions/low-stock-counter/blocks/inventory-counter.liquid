@@ -270,10 +270,20 @@
   #LowStockCounter-{{ block.id }}[data-product-placement="price"] {
     width: 100%;
     max-width: 100%;
-    margin-top: .75rem;
-    margin-bottom: .75rem;
+    margin: 1rem 0 3rem !important;
+    padding: .32rem .55rem !important;
+    border-radius: 20px !important;
+    background: var(--zoro-bg);
+    box-shadow: none !important;
     clear: both;
     align-self: stretch;
+  }
+  #LowStockCounter-{{ block.id }}[data-product-placement="price"] .zoro-stock__track {
+    display: none !important;
+  }
+  #LowStockCounter-{{ block.id }}[data-product-placement="price"] .zoro-stock__alert {
+    display: inline-flex;
+    width: auto;
   }
   #LowStockCounterPortal-{{ block.id }}[hidden] { display: none; }
   #LowStockCounterPortal-{{ block.id }} {
