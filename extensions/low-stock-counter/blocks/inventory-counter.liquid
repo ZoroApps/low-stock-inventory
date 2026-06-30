@@ -963,7 +963,7 @@
       return portal;
     };
 
-    const forceProductInlineSpacing = (node) => {
+    const forceProductInlineSpacing = (node, followingNode = null) => {
       if (!node) return;
       node.style.setProperty('margin-top', '1.25rem', 'important');
       node.style.setProperty('margin-bottom', '2.5rem', 'important');
@@ -989,6 +989,11 @@
       if (next && next !== root && !root.contains(next)) {
         next.style.setProperty('margin-top', '1rem', 'important');
         next.style.setProperty('padding-top', '.25rem', 'important');
+      }
+
+      if (followingNode && followingNode !== root && !root.contains(followingNode)) {
+        followingNode.style.setProperty('margin-top', '2.75rem', 'important');
+        followingNode.style.setProperty('padding-top', '.75rem', 'important');
       }
 
       productPurchaseButtons().forEach((button) => {
@@ -1034,7 +1039,7 @@
         } else if (resolvedInlineTarget.node.nextElementSibling !== node) {
           resolvedInlineTarget.node.insertAdjacentElement('afterend', node);
         }
-        forceProductInlineSpacing(node);
+        forceProductInlineSpacing(node, resolvedInlineTarget.mode === 'before' ? resolvedInlineTarget.node : null);
         node.hidden = false;
         if (isVisible(node)) {
           root.dataset.productPlacement = 'price';
