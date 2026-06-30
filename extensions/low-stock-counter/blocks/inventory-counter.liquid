@@ -306,12 +306,17 @@
     pointer-events: none;
   }
   #LowStockCounterPortal-{{ block.id }}.zoro-stock--inline-price {
-    position: static;
+    position: static !important;
     z-index: auto;
+    display: block !important;
+    clear: both;
     width: 100%;
     max-width: 100%;
-    margin: 2rem 0 3rem;
+    margin: 2rem 0 3rem !important;
     pointer-events: auto;
+  }
+  #LowStockCounterPortal-{{ block.id }}.zoro-stock--inline-price + * {
+    margin-top: 1.5rem !important;
   }
   #LowStockCounterPortal-{{ block.id }} .zoro-stock__alert {
     display: flex;
@@ -553,13 +558,17 @@
     pointer-events: none;
   }
   .zoro-adaptive-stock-badge-{{ block.id }}.zoro-adaptive-stock-badge--product-price-inline {
-    position: static;
+    position: static !important;
     z-index: auto;
-    display: flex;
+    display: flex !important;
+    clear: both;
     width: 100%;
     max-width: 100%;
-    margin: 2rem 0 3rem;
+    margin: 2rem 0 3rem !important;
     pointer-events: auto;
+  }
+  .zoro-adaptive-stock-badge-{{ block.id }}.zoro-adaptive-stock-badge--product-price-inline + * {
+    margin-top: 1.5rem !important;
   }
   @keyframes zoro-adaptive-pulse-{{ block.id }} {
     0% { box-shadow: 0 0 0 0 color-mix(in srgb, {{ block.settings.warning_color }} 44%, transparent); transform: scale(.9); }
@@ -950,6 +959,17 @@
       return portal;
     };
 
+    const forceProductInlineSpacing = (node) => {
+      if (!node) return;
+      node.style.setProperty('margin-top', '2rem', 'important');
+      node.style.setProperty('margin-bottom', '3rem', 'important');
+
+      const next = node.nextElementSibling;
+      if (!next || next === root || root.contains(next)) return;
+      const currentTop = Number.parseFloat(window.getComputedStyle(next).marginTop) || 0;
+      if (currentTop < 24) next.style.setProperty('margin-top', '1.5rem', 'important');
+    };
+
     const renderProductPortal = (copy, count = 0, progressVisible = false, soldOut = false) => {
       lastPortalRender = { copy, count, progressVisible, soldOut };
       const node = ensureProductPortal();
@@ -977,6 +997,7 @@
         } else if (inlineTarget.node.nextElementSibling !== node) {
           inlineTarget.node.insertAdjacentElement('afterend', node);
         }
+        forceProductInlineSpacing(node);
         node.hidden = false;
         if (isVisible(node)) {
           root.dataset.productPlacement = 'price';
