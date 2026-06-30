@@ -307,16 +307,18 @@
   }
   #LowStockCounterPortal-{{ block.id }}.zoro-stock--inline-price {
     position: static !important;
-    z-index: auto;
+    z-index: 1;
     display: block !important;
     clear: both;
     width: 100%;
     max-width: 100%;
-    margin: 2rem 0 3rem !important;
+    margin: 1.25rem 0 2.5rem !important;
     pointer-events: auto;
   }
-  #LowStockCounterPortal-{{ block.id }}.zoro-stock--inline-price + * {
-    margin-top: 1.5rem !important;
+  #LowStockCounterPortal-{{ block.id }}.zoro-stock--inline-price + *,
+  #LowStockCounterPortal-{{ block.id }}.zoro-stock--inline-price + form,
+  #LowStockCounterPortal-{{ block.id }}.zoro-stock--inline-price + product-form {
+    margin-top: 2rem !important;
   }
   #LowStockCounterPortal-{{ block.id }} .zoro-stock__alert {
     display: flex;
@@ -559,16 +561,18 @@
   }
   .zoro-adaptive-stock-badge-{{ block.id }}.zoro-adaptive-stock-badge--product-price-inline {
     position: static !important;
-    z-index: auto;
+    z-index: 1;
     display: flex !important;
     clear: both;
     width: 100%;
     max-width: 100%;
-    margin: 2rem 0 3rem !important;
+    margin: 1.25rem 0 2.5rem !important;
     pointer-events: auto;
   }
-  .zoro-adaptive-stock-badge-{{ block.id }}.zoro-adaptive-stock-badge--product-price-inline + * {
-    margin-top: 1.5rem !important;
+  .zoro-adaptive-stock-badge-{{ block.id }}.zoro-adaptive-stock-badge--product-price-inline + *,
+  .zoro-adaptive-stock-badge-{{ block.id }}.zoro-adaptive-stock-badge--product-price-inline + form,
+  .zoro-adaptive-stock-badge-{{ block.id }}.zoro-adaptive-stock-badge--product-price-inline + product-form {
+    margin-top: 2rem !important;
   }
   @keyframes zoro-adaptive-pulse-{{ block.id }} {
     0% { box-shadow: 0 0 0 0 color-mix(in srgb, {{ block.settings.warning_color }} 44%, transparent); transform: scale(.9); }
@@ -961,13 +965,25 @@
 
     const forceProductInlineSpacing = (node) => {
       if (!node) return;
-      node.style.setProperty('margin-top', '2rem', 'important');
-      node.style.setProperty('margin-bottom', '3rem', 'important');
+      node.style.setProperty('margin-top', '1.25rem', 'important');
+      node.style.setProperty('margin-bottom', '2.5rem', 'important');
+      node.style.setProperty('position', 'relative', 'important');
+      node.style.setProperty('z-index', '1', 'important');
 
       const next = node.nextElementSibling;
-      if (!next || next === root || root.contains(next)) return;
-      const currentTop = Number.parseFloat(window.getComputedStyle(next).marginTop) || 0;
-      if (currentTop < 24) next.style.setProperty('margin-top', '1.5rem', 'important');
+      if (next && next !== root && !root.contains(next)) {
+        next.style.setProperty('margin-top', '2rem', 'important');
+        next.style.setProperty('padding-top', '.25rem', 'important');
+      }
+
+      productPurchaseButtons().forEach((button) => {
+        const buttonBox = visibleBox(button);
+        const nodeBox = visibleBox(node);
+        if (!buttonBox || !nodeBox) return;
+        if (buttonBox.top >= nodeBox.top && buttonBox.top - nodeBox.bottom < 32) {
+          button.style.setProperty('margin-top', '2rem', 'important');
+        }
+      });
     };
 
     const renderProductPortal = (copy, count = 0, progressVisible = false, soldOut = false) => {
@@ -1713,8 +1729,15 @@
         } else {
           anchor.node.insertAdjacentElement('afterend', productPriceBadge);
         }
-        productPriceBadge.style.setProperty('margin-top', '1.5rem', 'important');
-        productPriceBadge.style.setProperty('margin-bottom', '1.75rem', 'important');
+        productPriceBadge.style.setProperty('margin-top', '1.25rem', 'important');
+        productPriceBadge.style.setProperty('margin-bottom', '2.5rem', 'important');
+        productPriceBadge.style.setProperty('position', 'relative', 'important');
+        productPriceBadge.style.setProperty('z-index', '1', 'important');
+        const next = productPriceBadge.nextElementSibling;
+        if (next) {
+          next.style.setProperty('margin-top', '2rem', 'important');
+          next.style.setProperty('padding-top', '.25rem', 'important');
+        }
         productPriceBadge.hidden = false;
         if (isVisible(productPriceBadge)) return true;
       }
