@@ -812,6 +812,18 @@
       return candidates[0] ? { node: candidates[0], mode: 'after' } : null;
     };
 
+    const priceBlockTarget = (target) => {
+      const node = target?.node;
+      if (!node) return null;
+      const anchor = node.closest?.([
+        '.price',
+        '[data-product-price]',
+        '[id*="price" i]',
+        '[class*="price" i]'
+      ].join(', ')) || node.parentElement || node;
+      return { node: anchor, mode: target.mode || 'after' };
+    };
+
     const productInfoContainer = () => {
       const form = productForm();
       const purchase = purchaseTarget()?.node;
@@ -836,7 +848,8 @@
 
     const productPriceTarget = () => {
       const price = exactCurrentPriceTarget() || visiblePriceTarget();
-      if (price) return price;
+      const priceBlock = priceBlockTarget(price);
+      if (priceBlock) return priceBlock;
 
       const container = productInfoContainer();
       const selectors = [
@@ -849,7 +862,7 @@
       for (const selector of selectors) {
         const node = container?.querySelector(selector);
         if (node && !node.contains(root) && !root.contains(node)) {
-          return { node, mode: 'after' };
+          return priceBlockTarget({ node, mode: 'after' });
         }
       }
 
@@ -1554,9 +1567,20 @@
       return candidates[0] || null;
     };
 
+    const productPriceBlockTarget = (node) => {
+      if (!node) return null;
+      return node.closest?.([
+        '.price',
+        '[data-product-price]',
+        '[id*="price" i]',
+        '[class*="price" i]'
+      ].join(', ')) || node.parentElement || node;
+    };
+
     const productPagePriceTarget = () => {
       const visiblePrice = productVisiblePriceTarget();
-      if (visiblePrice) return visiblePrice;
+      const visiblePriceBlock = productPriceBlockTarget(visiblePrice);
+      if (visiblePriceBlock) return visiblePriceBlock;
 
       const container = productInfoContainer();
       const selectors = [
@@ -1568,7 +1592,8 @@
 
       for (const selector of selectors) {
         const node = container?.querySelector(selector);
-        if (node && !node.contains(root)) return node;
+        const block = productPriceBlockTarget(node);
+        if (block && !block.contains(root)) return block;
       }
 
       return null;
