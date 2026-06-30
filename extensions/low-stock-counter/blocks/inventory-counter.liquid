@@ -875,7 +875,7 @@
         }
       }
 
-      return null;
+      return purchaseTarget();
     };
 
     const placeRootNearProductPrice = () => {
@@ -1617,7 +1617,7 @@
         if (block && !block.contains(root)) return block;
       }
 
-      return null;
+      return productPurchaseTarget()?.node || null;
     };
 
     const placeProductRootNearPrice = () => {
@@ -1703,12 +1703,18 @@
         productPriceBadge.textContent = badge.copy;
       }
 
-      if (anchor.mode === 'after' && !anchor.node.contains(productPriceBadge)) {
+      if (!anchor.node.contains(productPriceBadge)) {
         productPriceBadge.classList.add('zoro-adaptive-stock-badge--product-price-inline');
         productPriceBadge.style.removeProperty('--zoro-product-badge-width');
         productPriceBadge.style.removeProperty('left');
         productPriceBadge.style.removeProperty('top');
-        anchor.node.insertAdjacentElement('afterend', productPriceBadge);
+        if (anchor.mode === 'before') {
+          anchor.node.insertAdjacentElement('beforebegin', productPriceBadge);
+        } else {
+          anchor.node.insertAdjacentElement('afterend', productPriceBadge);
+        }
+        productPriceBadge.style.setProperty('margin-top', '1.5rem', 'important');
+        productPriceBadge.style.setProperty('margin-bottom', '1.75rem', 'important');
         productPriceBadge.hidden = false;
         if (isVisible(productPriceBadge)) return true;
       }
