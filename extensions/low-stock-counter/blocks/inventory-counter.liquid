@@ -970,19 +970,29 @@
       node.style.setProperty('position', 'relative', 'important');
       node.style.setProperty('z-index', '1', 'important');
 
-      const next = node.nextElementSibling;
+      let spacer = document.getElementById('LowStockCounterSpacer-{{ block.id }}');
+      if (!spacer) {
+        spacer = document.createElement('div');
+        spacer.id = 'LowStockCounterSpacer-{{ block.id }}';
+        spacer.setAttribute('aria-hidden', 'true');
+      }
+      if (node.nextElementSibling !== spacer) {
+        node.insertAdjacentElement('afterend', spacer);
+      }
+      spacer.style.setProperty('display', 'block', 'important');
+      spacer.style.setProperty('height', '1.5rem', 'important');
+      spacer.style.setProperty('min-height', '1.5rem', 'important');
+      spacer.style.setProperty('clear', 'both', 'important');
+      spacer.style.setProperty('pointer-events', 'none', 'important');
+
+      const next = spacer.nextElementSibling;
       if (next && next !== root && !root.contains(next)) {
-        next.style.setProperty('margin-top', '2rem', 'important');
+        next.style.setProperty('margin-top', '1rem', 'important');
         next.style.setProperty('padding-top', '.25rem', 'important');
       }
 
       productPurchaseButtons().forEach((button) => {
-        const buttonBox = visibleBox(button);
-        const nodeBox = visibleBox(node);
-        if (!buttonBox || !nodeBox) return;
-        if (buttonBox.top >= nodeBox.top && buttonBox.top - nodeBox.bottom < 32) {
-          button.style.setProperty('margin-top', '2rem', 'important');
-        }
+        button.style.setProperty('margin-top', '1.5rem', 'important');
       });
     };
 
@@ -1022,6 +1032,7 @@
       }
 
       node.classList.remove('zoro-stock--inline-price');
+      document.getElementById('LowStockCounterSpacer-{{ block.id }}')?.remove();
       if (!document.body.contains(node)) document.body.appendChild(node);
       if (!positionProductPortal(node)) {
         node.hidden = true;
@@ -1309,6 +1320,7 @@
     };
 
     const removeProductPriceBadge = () => {
+      document.getElementById('LowStockAdaptiveSpacer-{{ block.id }}')?.remove();
       productPriceBadge?.remove();
       productPriceBadge = null;
     };
@@ -1733,9 +1745,23 @@
         productPriceBadge.style.setProperty('margin-bottom', '2.5rem', 'important');
         productPriceBadge.style.setProperty('position', 'relative', 'important');
         productPriceBadge.style.setProperty('z-index', '1', 'important');
-        const next = productPriceBadge.nextElementSibling;
+        let spacer = document.getElementById('LowStockAdaptiveSpacer-{{ block.id }}');
+        if (!spacer) {
+          spacer = document.createElement('div');
+          spacer.id = 'LowStockAdaptiveSpacer-{{ block.id }}';
+          spacer.setAttribute('aria-hidden', 'true');
+        }
+        if (productPriceBadge.nextElementSibling !== spacer) {
+          productPriceBadge.insertAdjacentElement('afterend', spacer);
+        }
+        spacer.style.setProperty('display', 'block', 'important');
+        spacer.style.setProperty('height', '1.5rem', 'important');
+        spacer.style.setProperty('min-height', '1.5rem', 'important');
+        spacer.style.setProperty('clear', 'both', 'important');
+        spacer.style.setProperty('pointer-events', 'none', 'important');
+        const next = spacer.nextElementSibling;
         if (next) {
-          next.style.setProperty('margin-top', '2rem', 'important');
+          next.style.setProperty('margin-top', '1rem', 'important');
           next.style.setProperty('padding-top', '.25rem', 'important');
         }
         productPriceBadge.hidden = false;
@@ -1743,6 +1769,7 @@
       }
 
       productPriceBadge.classList.remove('zoro-adaptive-stock-badge--product-price-inline');
+      document.getElementById('LowStockAdaptiveSpacer-{{ block.id }}')?.remove();
       if (!document.body.contains(productPriceBadge)) document.body.appendChild(productPriceBadge);
 
       if (!positionProductPriceBadge()) {
