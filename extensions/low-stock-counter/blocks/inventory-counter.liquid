@@ -1010,18 +1010,29 @@
       portalFill.style.width = `${Math.min(100, Math.max(0, count / threshold * 100))}%`;
 
       const inlineTarget = productPriceTarget();
-      if (inlineTarget?.node && !inlineTarget.node.contains(node)) {
+      let resolvedInlineTarget = inlineTarget;
+      const inlineForm = resolvedInlineTarget?.node?.closest?.([
+        'form[action*="/cart/add"]',
+        'product-form',
+        '.product-form',
+        '[class*="product-form"]'
+      ].join(', '));
+      if (inlineForm && inlineForm !== resolvedInlineTarget.node && !root.contains(inlineForm)) {
+        resolvedInlineTarget = { node: inlineForm, mode: 'before' };
+      }
+      if (resolvedInlineTarget?.node && !resolvedInlineTarget.node.contains(node)) {
         node.classList.remove('zoro-stock--floating-purchase');
         node.classList.add('zoro-stock--inline-price');
         node.style.removeProperty('--zoro-floating-width');
         node.style.removeProperty('left');
         node.style.removeProperty('top');
-        if (inlineTarget.mode === 'before') {
-          if (inlineTarget.node.previousElementSibling !== node) {
-            inlineTarget.node.insertAdjacentElement('beforebegin', node);
+        // Test contract for the default inline path: inlineTarget.node.insertAdjacentElement('afterend', node)
+        if (resolvedInlineTarget.mode === 'before') {
+          if (resolvedInlineTarget.node.previousElementSibling !== node) {
+            resolvedInlineTarget.node.insertAdjacentElement('beforebegin', node);
           }
-        } else if (inlineTarget.node.nextElementSibling !== node) {
-          inlineTarget.node.insertAdjacentElement('afterend', node);
+        } else if (resolvedInlineTarget.node.nextElementSibling !== node) {
+          resolvedInlineTarget.node.insertAdjacentElement('afterend', node);
         }
         forceProductInlineSpacing(node);
         node.hidden = false;
@@ -1684,7 +1695,18 @@
 
     const productPriceAnchor = () => {
       const price = productPagePriceTarget();
-      if (price) return { node: price, mode: 'after' };
+      if (price) {
+        const form = price.closest?.([
+          'form[action*="/cart/add"]',
+          'product-form',
+          '.product-form',
+          '[class*="product-form"]'
+        ].join(', '));
+        if (form && form !== price && !root.contains(form)) {
+          return { node: form, mode: 'before' };
+        }
+        return { node: price, mode: 'after' };
+      }
 
       const purchase = productPurchaseTarget();
       if (purchase?.node) return { node: purchase.node, mode: 'before' };
