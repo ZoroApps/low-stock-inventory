@@ -163,7 +163,8 @@ test('main low stock block adapts to collection and cart pages', () => {
   assert.match(block, /zoro-adaptive-stock-badge--product-price-inline/);
   assert.match(block, /const productPriceBlockTarget = \(node\) =>/);
   assert.match(block, /insertAdjacentElement\('afterend', productPriceBadge\)/);
-  assert.match(block, /renderProductPriceBadge\(badge\)/);
+  assert.match(block, /const renderProductPriceBadge = \(badge\) =>/);
+  assert.match(block, /const renderProductPageOverlay = \(\) => \{\s*removeCurrentProductOverlay\(\);\s*removeProductPriceBadge\(\);\s*hideProductInline\(\);\s*\};/);
   assert.match(block, /positionProductPriceBadge/);
   assert.match(block, /removeCurrentProductOverlay/);
   assert.match(block, /\[data-zoro-adaptive-stock\*="\{\{ block\.id \}\}-current-"\] \{ display: none !important; \}/);
