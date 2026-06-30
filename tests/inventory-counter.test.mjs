@@ -131,7 +131,8 @@ test('main low stock block adapts to collection and cart pages', () => {
   assert.match(block, /productVisiblePriceTarget/);
   assert.match(block, /exactCurrentPriceTarget/);
   assert.match(block, /retryProductPlacement/);
-  assert.match(block, /const productPriceTarget = \(\) => \{\s*const price = exactCurrentPriceTarget\(\) \|\| visiblePriceTarget\(\);\s*if \(price\) return price;/);
+  assert.match(block, /const priceBlockTarget = \(target\) =>/);
+  assert.match(block, /const productPriceTarget = \(\) => \{\s*const price = exactCurrentPriceTarget\(\) \|\| visiblePriceTarget\(\);\s*const priceBlock = priceBlockTarget\(price\);\s*if \(priceBlock\) return priceBlock;/);
   assert.match(block, /const productPriceTarget = \(\) => \{[\s\S]*?return null;\s*\};/);
   assert.doesNotMatch(block, /const purchase = purchaseTarget\(\);\s*if \(purchase\) return purchase;/);
   assert.match(block, /\[data-product-placement="price"\]/);
@@ -160,6 +161,7 @@ test('main low stock block adapts to collection and cart pages', () => {
   assert.doesNotMatch(block, /root\.dataset\.productPlacement === 'price'\) return/);
   assert.match(block, /zoro-adaptive-stock-badge--product-price/);
   assert.match(block, /zoro-adaptive-stock-badge--product-price-inline/);
+  assert.match(block, /const productPriceBlockTarget = \(node\) =>/);
   assert.match(block, /insertAdjacentElement\('afterend', productPriceBadge\)/);
   assert.match(block, /renderProductPriceBadge\(badge\)/);
   assert.match(block, /positionProductPriceBadge/);
