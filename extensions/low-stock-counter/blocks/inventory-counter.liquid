@@ -544,6 +544,15 @@
     box-shadow: 0 .25rem .75rem rgba(0, 0, 0, .10);
     pointer-events: none;
   }
+  .zoro-adaptive-stock-badge-{{ block.id }}.zoro-adaptive-stock-badge--product-price-inline {
+    position: static;
+    z-index: auto;
+    display: flex;
+    width: fit-content;
+    max-width: 100%;
+    margin: 1rem 0 1.25rem;
+    pointer-events: auto;
+  }
   @keyframes zoro-adaptive-pulse-{{ block.id }} {
     0% { box-shadow: 0 0 0 0 color-mix(in srgb, {{ block.settings.warning_color }} 44%, transparent); transform: scale(.9); }
     80%, 100% { box-shadow: 0 0 0 .5rem transparent; transform: scale(1); }
@@ -868,7 +877,7 @@
 
       const box = target.node.getBoundingClientRect();
       const columnBox = purchaseColumnBox() || box;
-      const gap = 8;
+      const gap = 16;
       const portalBox = node.getBoundingClientRect();
       const width = Math.max(160, Math.min(columnBox.width, window.innerWidth - 24));
       const left = Math.max(12, Math.min(columnBox.left + window.scrollX, window.scrollX + window.innerWidth - width - 12));
@@ -1615,6 +1624,19 @@
         productPriceBadge.dataset.state = badge.state;
         productPriceBadge.textContent = badge.copy;
       }
+
+      if (anchor.mode === 'after' && !anchor.node.contains(productPriceBadge)) {
+        productPriceBadge.classList.add('zoro-adaptive-stock-badge--product-price-inline');
+        productPriceBadge.style.removeProperty('--zoro-product-badge-width');
+        productPriceBadge.style.removeProperty('left');
+        productPriceBadge.style.removeProperty('top');
+        anchor.node.insertAdjacentElement('afterend', productPriceBadge);
+        productPriceBadge.hidden = false;
+        if (isVisible(productPriceBadge)) return true;
+      }
+
+      productPriceBadge.classList.remove('zoro-adaptive-stock-badge--product-price-inline');
+      if (!document.body.contains(productPriceBadge)) document.body.appendChild(productPriceBadge);
 
       if (!positionProductPriceBadge()) {
         removeProductPriceBadge();
