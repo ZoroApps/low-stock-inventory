@@ -156,6 +156,8 @@ test('main low stock block adapts to collection and cart pages', () => {
   assert.match(block, /root\.dataset\.productPlacement = 'portal'/);
   assert.doesNotMatch(block, /root\.dataset\.productPlacement === 'price'\) return/);
   assert.match(block, /zoro-adaptive-stock-badge--product-price/);
+  assert.match(block, /zoro-adaptive-stock-badge--product-price-inline/);
+  assert.match(block, /insertAdjacentElement\('afterend', productPriceBadge\)/);
   assert.match(block, /renderProductPriceBadge\(badge\)/);
   assert.match(block, /positionProductPriceBadge/);
   assert.match(block, /removeCurrentProductOverlay/);
