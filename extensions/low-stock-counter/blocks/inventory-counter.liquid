@@ -992,12 +992,12 @@
       }
 
       if (followingNode && followingNode !== root && !root.contains(followingNode)) {
-        followingNode.style.setProperty('margin-top', '2.75rem', 'important');
-        followingNode.style.setProperty('padding-top', '.75rem', 'important');
+        followingNode.style.setProperty('margin-top', '3.75rem', 'important');
+        followingNode.style.setProperty('padding-top', '1rem', 'important');
       }
 
       productPurchaseButtons().forEach((button) => {
-        button.style.setProperty('margin-top', '1.5rem', 'important');
+        button.style.setProperty('margin-top', '2.5rem', 'important');
       });
     };
 
@@ -1788,9 +1788,12 @@
         spacer.style.setProperty('pointer-events', 'none', 'important');
         const next = spacer.nextElementSibling;
         if (next) {
-          next.style.setProperty('margin-top', '1rem', 'important');
-          next.style.setProperty('padding-top', '.25rem', 'important');
+          next.style.setProperty('margin-top', '3.75rem', 'important');
+          next.style.setProperty('padding-top', '1rem', 'important');
         }
+        productPurchaseButtons().forEach((button) => {
+          button.style.setProperty('margin-top', '2.5rem', 'important');
+        });
         productPriceBadge.hidden = false;
         if (isVisible(productPriceBadge)) return true;
       }
