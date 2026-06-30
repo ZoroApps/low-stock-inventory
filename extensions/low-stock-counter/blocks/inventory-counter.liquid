@@ -312,8 +312,11 @@
     clear: both;
     width: 100%;
     max-width: 100%;
-    margin: 1.25rem 0 2.5rem !important;
+    margin: 1.25rem 0 3rem !important;
     pointer-events: auto;
+  }
+  #LowStockCounterPortal-{{ block.id }}.zoro-stock--inline-price .zoro-stock__track {
+    display: none !important;
   }
   #LowStockCounterPortal-{{ block.id }}.zoro-stock--inline-price + *,
   #LowStockCounterPortal-{{ block.id }}.zoro-stock--inline-price + form,
@@ -566,7 +569,7 @@
     clear: both;
     width: 100%;
     max-width: 100%;
-    margin: 1.25rem 0 2.5rem !important;
+    margin: 1.25rem 0 3rem !important;
     pointer-events: auto;
   }
   .zoro-adaptive-stock-badge-{{ block.id }}.zoro-adaptive-stock-badge--product-price-inline + *,
@@ -966,7 +969,7 @@
     const forceProductInlineSpacing = (node, followingNode = null) => {
       if (!node) return;
       node.style.setProperty('margin-top', '1.25rem', 'important');
-      node.style.setProperty('margin-bottom', '2.5rem', 'important');
+      node.style.setProperty('margin-bottom', '3rem', 'important');
       node.style.setProperty('position', 'relative', 'important');
       node.style.setProperty('z-index', '1', 'important');
 
@@ -1769,7 +1772,7 @@
           anchor.node.insertAdjacentElement('afterend', productPriceBadge);
         }
         productPriceBadge.style.setProperty('margin-top', '1.25rem', 'important');
-        productPriceBadge.style.setProperty('margin-bottom', '2.5rem', 'important');
+        productPriceBadge.style.setProperty('margin-bottom', '3rem', 'important');
         productPriceBadge.style.setProperty('position', 'relative', 'important');
         productPriceBadge.style.setProperty('z-index', '1', 'important');
         let spacer = document.getElementById('LowStockAdaptiveSpacer-{{ block.id }}');
