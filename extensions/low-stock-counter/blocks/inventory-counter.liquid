@@ -273,8 +273,7 @@
     display: block !important;
     width: 100%;
     max-width: 100%;
-    min-height: 3.75rem;
-    margin: 1.35rem 0 4rem !important;
+    margin: .65rem 0 .9rem !important;
     padding: .32rem .55rem !important;
     border-radius: 20px !important;
     background: var(--zoro-bg);
@@ -326,8 +325,7 @@
     clear: both;
     width: 100%;
     max-width: 100%;
-    min-height: 3.75rem;
-    margin: 1.25rem 0 4rem !important;
+    margin: .65rem 0 .9rem !important;
     pointer-events: auto;
   }
   #LowStockCounterPortal-{{ block.id }}.zoro-stock--inline-price .zoro-stock__track {
@@ -336,7 +334,7 @@
   #LowStockCounterPortal-{{ block.id }}.zoro-stock--inline-price + *,
   #LowStockCounterPortal-{{ block.id }}.zoro-stock--inline-price + form,
   #LowStockCounterPortal-{{ block.id }}.zoro-stock--inline-price + product-form {
-    margin-top: 4rem !important;
+    margin-top: 1rem !important;
   }
   #LowStockCounterPortal-{{ block.id }} .zoro-stock__alert {
     display: flex;
@@ -957,18 +955,14 @@
 
     const placeRootNearPurchaseControls = () => {
       if (pageType !== 'product') return false;
-      const target = purchaseTarget() || productPriceTarget();
+      const target = productPriceTarget() || purchaseTarget();
       if (!target?.node || target.node.contains(root) || root.contains(target.node)) return false;
 
-      if (target.mode === 'before') {
-        if (target.node.previousElementSibling !== root) {
-          target.node.insertAdjacentElement('beforebegin', root);
-        }
-      } else if (target.node.nextElementSibling !== root) {
-        target.node.insertAdjacentElement('afterend', root);
+      if (target.node.previousElementSibling !== root) {
+        target.node.insertAdjacentElement('beforebegin', root);
       }
 
-      forceProductInlineSpacing(root, target.mode === 'before' ? target.node : null);
+      forceProductInlineSpacing(root, null, false);
       root.dataset.productPlacement = 'price';
       return true;
     };
@@ -1039,16 +1033,20 @@
       return portal;
     };
 
-    const forceProductInlineSpacing = (node, followingNode = null) => {
+    const forceProductInlineSpacing = (node, followingNode = null, reserveFormGap = true) => {
       if (!node) return;
       node.style.setProperty('display', 'block', 'important');
       node.style.setProperty('width', '100%', 'important');
       node.style.setProperty('clear', 'both', 'important');
-      node.style.setProperty('min-height', '3.75rem', 'important');
-      node.style.setProperty('margin-top', '1.15rem', 'important');
-      node.style.setProperty('margin-bottom', '4rem', 'important');
+      node.style.setProperty('margin-top', '.65rem', 'important');
+      node.style.setProperty('margin-bottom', reserveFormGap ? '4rem' : '.9rem', 'important');
       node.style.setProperty('position', 'relative', 'important');
       node.style.setProperty('z-index', '1', 'important');
+
+      if (!reserveFormGap) {
+        document.getElementById('LowStockCounterSpacer-{{ block.id }}')?.remove();
+        return;
+      }
 
       let spacer = document.getElementById('LowStockCounterSpacer-{{ block.id }}');
       if (!spacer) {
