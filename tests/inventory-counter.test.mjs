@@ -149,8 +149,10 @@ test('main low stock block adapts to collection and cart pages', () => {
   assert.match(block, /positionProductPortal/);
   assert.match(block, /node\.classList\.add\('zoro-stock--floating-purchase'\)/);
   assert.match(block, /zoro-stock--inline-price/);
-  assert.match(block, /const inlineTarget = productPriceTarget\(\)/);
-  assert.match(block, /inlineTarget\.node\.insertAdjacentElement\('afterend', node\)/);
+  assert.match(block, /const formTarget = productForm\(\)/);
+  assert.match(block, /\? \{ node: formTarget, mode: 'before' \}/);
+  assert.match(block, /: productPriceTarget\(\)/);
+  assert.match(block, /resolvedInlineTarget\.node\.insertAdjacentElement\('beforebegin', node\)/);
   assert.match(block, /document\.body\.appendChild\(portal\)/);
   assert.match(block, /node\.style\.left = `\$\{left\}px`/);
   assert.match(block, /node\.style\.top = `\$\{top\}px`/);
