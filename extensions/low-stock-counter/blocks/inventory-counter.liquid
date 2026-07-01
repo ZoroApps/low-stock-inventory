@@ -950,6 +950,24 @@
       return true;
     };
 
+    const placeRootNearPurchaseControls = () => {
+      if (pageType !== 'product') return false;
+      const target = purchaseTarget() || productPriceTarget();
+      if (!target?.node || target.node.contains(root) || root.contains(target.node)) return false;
+
+      if (target.mode === 'before') {
+        if (target.node.previousElementSibling !== root) {
+          target.node.insertAdjacentElement('beforebegin', root);
+        }
+      } else if (target.node.nextElementSibling !== root) {
+        target.node.insertAdjacentElement('afterend', root);
+      }
+
+      forceProductInlineSpacing(root, target.mode === 'before' ? target.node : null);
+      root.dataset.productPlacement = 'price';
+      return true;
+    };
+
     const portalTarget = () => pageType === 'product'
       ? purchaseTarget() || exactCurrentPriceTarget() || visiblePriceTarget()
       : exactCurrentPriceTarget() || visiblePriceTarget() || purchaseTarget();
@@ -1141,10 +1159,15 @@
 
       if (pageType === 'product') {
         root.dataset.cardMode = 'true';
-        inventory.hidden = true;
-        root.hidden = true;
-        renderProductPortal(copy, count, progressVisible, soldOut);
-        retryProductPlacement();
+        inventory.hidden = false;
+        root.hidden = false;
+        if (portal) portal.hidden = true;
+        if (!placeRootNearPurchaseControls()) {
+          inventory.hidden = true;
+          root.hidden = true;
+          renderProductPortal(copy, count, progressVisible, soldOut);
+          retryProductPlacement();
+        }
         return;
       }
 
