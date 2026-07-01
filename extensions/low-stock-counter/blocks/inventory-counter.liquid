@@ -873,19 +873,57 @@
     };
 
     const productPriceTarget = () => {
-      const price = exactCurrentPriceTarget() || visiblePriceTarget();
-      const priceBlock = priceBlockTarget(price);
-      if (priceBlock) return priceBlock;
-
       const container = productInfoContainer();
       const selectors = [
+        '.price',
+        '[id*="price" i]',
+        '[class*="price" i]',
+        '[data-product-price]',
+        'span',
+        'div',
+        'p',
+        'dd'
+      ];
+      const blockSelectors = [
         '.price',
         '[id*="price" i]',
         '[class*="price" i]',
         '[data-product-price]'
       ];
 
-      for (const selector of selectors) {
+      if (container) {
+        const scopedCandidates = [...container.querySelectorAll(selectors.join(', '))]
+          .filter((node) => {
+            if (node === root || root.contains(node) || node.contains(root)) return false;
+            if (node.closest('[data-zoro-stock], [data-zoro-adaptive-stock]')) return false;
+            if (node.closest('button, label, option, select')) return false;
+            const copy = (node.textContent || '').replace(/\s+/g, ' ').trim();
+            if (!/[$£€]|(?:^|\s)(?:USD|CAD|AUD|GBP|EUR)(?:\s|$)|\d+[.,]\d{2}/.test(copy)) return false;
+            if (copy.length > 80) return false;
+            return visibleBox(node);
+          })
+          .sort((left, right) => {
+            const purchaseBox = visibleBox(purchaseTarget()?.node);
+            const leftBox = left.getBoundingClientRect();
+            const rightBox = right.getBoundingClientRect();
+            if (purchaseBox) {
+              return Math.abs(purchaseBox.top - leftBox.bottom) - Math.abs(purchaseBox.top - rightBox.bottom);
+            }
+            return (rightBox.left - leftBox.left) || (leftBox.top - rightBox.top);
+          });
+
+        const scopedPriceBlock = priceBlockTarget(scopedCandidates[0] ? { node: scopedCandidates[0], mode: 'after' } : null);
+        if (scopedPriceBlock) return scopedPriceBlock;
+
+        const form = productForm();
+        if (form && container.contains(form)) return { node: form, mode: 'before' };
+      }
+
+      const price = exactCurrentPriceTarget() || visiblePriceTarget();
+      const priceBlock = priceBlockTarget(price);
+      if (priceBlock) return priceBlock;
+
+      for (const selector of blockSelectors) {
         const node = container?.querySelector(selector);
         if (node && !node.contains(root) && !root.contains(node)) {
           return priceBlockTarget({ node, mode: 'after' });
