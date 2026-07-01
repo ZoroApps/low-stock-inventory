@@ -1100,10 +1100,8 @@
         }
         forceProductInlineSpacing(node, resolvedInlineTarget.mode === 'before' ? resolvedInlineTarget.node : null);
         node.hidden = false;
-        if (isVisible(node)) {
-          root.dataset.productPlacement = 'price';
-          return true;
-        }
+        root.dataset.productPlacement = 'price';
+        return true;
       }
 
       node.classList.remove('zoro-stock--inline-price');
