@@ -918,8 +918,6 @@
         const scopedPriceBlock = priceBlockTarget(scopedCandidates[0] ? { node: scopedCandidates[0], mode: 'after' } : null);
         if (scopedPriceBlock) return scopedPriceBlock;
 
-        const form = productForm();
-        if (form && container.contains(form)) return { node: form, mode: 'before' };
       }
 
       const price = exactCurrentPriceTarget() || visiblePriceTarget();
@@ -933,7 +931,7 @@
         }
       }
 
-      return purchaseTarget();
+      return null;
     };
 
     const placeRootNearProductPrice = () => {
@@ -958,11 +956,16 @@
       const target = productPriceTarget() || purchaseTarget();
       if (!target?.node || target.node.contains(root) || root.contains(target.node)) return false;
 
-      if (target.node.previousElementSibling !== root) {
-        target.node.insertAdjacentElement('beforebegin', root);
+      if (target.mode === 'before') {
+        if (target.node.previousElementSibling !== root) {
+          target.node.insertAdjacentElement('beforebegin', root);
+        }
+      } else if (target.node.nextElementSibling !== root) {
+        target.node.insertAdjacentElement('afterend', root);
       }
 
-      forceProductInlineSpacing(root, null, false);
+      const followingNode = root.nextElementSibling;
+      forceProductInlineSpacing(root, followingNode, true);
       root.dataset.productPlacement = 'price';
       return true;
     };
