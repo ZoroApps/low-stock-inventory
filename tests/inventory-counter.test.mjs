@@ -132,7 +132,10 @@ test('main low stock block adapts to collection and cart pages', () => {
   assert.match(block, /exactCurrentPriceTarget/);
   assert.match(block, /retryProductPlacement/);
   assert.match(block, /const priceBlockTarget = \(target\) =>/);
-  assert.match(block, /const productPriceTarget = \(\) => \{\s*const price = exactCurrentPriceTarget\(\) \|\| visiblePriceTarget\(\);\s*const priceBlock = priceBlockTarget\(price\);\s*if \(priceBlock\) return priceBlock;/);
+  assert.match(block, /const productPriceTarget = \(\) => \{[\s\S]*?const container = productInfoContainer\(\);/);
+  assert.match(block, /const scopedCandidates = \[\.\.\.container\.querySelectorAll\(selectors\.join\(', '\)\)\]/);
+  assert.match(block, /if \(scopedPriceBlock\) return scopedPriceBlock;/);
+  assert.match(block, /const price = exactCurrentPriceTarget\(\) \|\| visiblePriceTarget\(\);/);
   assert.match(block, /const productPriceTarget = \(\) => \{[\s\S]*?return null;\s*\};/);
   assert.doesNotMatch(block, /const purchase = purchaseTarget\(\);\s*if \(purchase\) return purchase;/);
   assert.match(block, /\[data-product-placement="price"\]/);
