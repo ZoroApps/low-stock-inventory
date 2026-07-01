@@ -1065,7 +1065,10 @@
       portalProgress.hidden = !showProgress || !progressVisible;
       portalFill.style.width = `${Math.min(100, Math.max(0, count / threshold * 100))}%`;
 
-      const inlineTarget = productPriceTarget();
+      const formTarget = productForm();
+      const inlineTarget = formTarget && !root.contains(formTarget)
+        ? { node: formTarget, mode: 'before' }
+        : productPriceTarget();
       let resolvedInlineTarget = inlineTarget;
       const inlineForm = resolvedInlineTarget?.node?.closest?.([
         'form[action*="/cart/add"]',
@@ -1082,7 +1085,7 @@
         node.style.removeProperty('--zoro-floating-width');
         node.style.removeProperty('left');
         node.style.removeProperty('top');
-        // Test contract for the default inline path: inlineTarget.node.insertAdjacentElement('afterend', node)
+        // Product pages prefer the purchase form so the badge stays in the price column.
         if (resolvedInlineTarget.mode === 'before') {
           if (resolvedInlineTarget.node.previousElementSibling !== node) {
             resolvedInlineTarget.node.insertAdjacentElement('beforebegin', node);
