@@ -950,7 +950,9 @@
       return true;
     };
 
-    const portalTarget = () => exactCurrentPriceTarget() || visiblePriceTarget() || purchaseTarget();
+    const portalTarget = () => pageType === 'product'
+      ? purchaseTarget() || exactCurrentPriceTarget() || visiblePriceTarget()
+      : exactCurrentPriceTarget() || visiblePriceTarget() || purchaseTarget();
 
     const positionProductPortal = (node) => {
       const target = portalTarget();
@@ -1065,9 +1067,9 @@
       portalProgress.hidden = !showProgress || !progressVisible;
       portalFill.style.width = `${Math.min(100, Math.max(0, count / threshold * 100))}%`;
 
-      const formTarget = productForm();
-      const inlineTarget = formTarget && !root.contains(formTarget)
-        ? { node: formTarget, mode: 'before' }
+      const purchaseColumnTarget = purchaseTarget();
+      const inlineTarget = purchaseColumnTarget?.node && !root.contains(purchaseColumnTarget.node)
+        ? purchaseColumnTarget
         : productPriceTarget();
       let resolvedInlineTarget = inlineTarget;
       const inlineForm = resolvedInlineTarget?.node?.closest?.([
