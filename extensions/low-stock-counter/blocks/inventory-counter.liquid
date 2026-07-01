@@ -265,12 +265,15 @@
     font-size: var(--zoro-size);
   }
   #LowStockCounter-{{ block.id }}[hidden] { display: none; }
-  #LowStockCounter-{{ block.id }}[data-card-mode="true"] { display: none !important; }
+  #LowStockCounter-{{ block.id }}[data-card-mode="true"]:not([data-product-placement="price"]) {
+    display: none !important;
+  }
   [data-zoro-adaptive-stock*="{{ block.id }}-current-"] { display: none !important; }
   #LowStockCounter-{{ block.id }}[data-product-placement="price"] {
+    display: block !important;
     width: 100%;
     max-width: 100%;
-    margin: 1rem 0 3rem !important;
+    margin: 1.35rem 0 2.75rem !important;
     padding: .32rem .55rem !important;
     border-radius: 20px !important;
     background: var(--zoro-bg);
