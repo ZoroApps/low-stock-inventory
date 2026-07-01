@@ -312,7 +312,7 @@
   }
   #LowStockCounterPortal-{{ block.id }}.zoro-stock--floating-purchase {
     position: absolute;
-    z-index: 2147482500;
+    z-index: 2;
     width: var(--zoro-floating-width, min(100%, 28rem));
     max-width: calc(100vw - 2rem);
     margin: 0;
@@ -569,7 +569,7 @@
   }
   .zoro-adaptive-stock-badge-{{ block.id }}.zoro-adaptive-stock-badge--product-price {
     position: absolute;
-    z-index: 2147482500;
+    z-index: 2;
     margin: 0;
     max-width: min(var(--zoro-product-badge-width, 22rem), calc(100vw - 1.5rem));
     box-shadow: 0 .25rem .75rem rgba(0, 0, 0, .10);
@@ -577,7 +577,7 @@
   }
   .zoro-adaptive-stock-badge-{{ block.id }}.zoro-adaptive-stock-badge--product-price-inline {
     position: static !important;
-    z-index: 1;
+    z-index: auto;
     display: flex !important;
     clear: both;
     width: 100%;
@@ -589,6 +589,28 @@
   .zoro-adaptive-stock-badge-{{ block.id }}.zoro-adaptive-stock-badge--product-price-inline + form,
   .zoro-adaptive-stock-badge-{{ block.id }}.zoro-adaptive-stock-badge--product-price-inline + product-form {
     margin-top: 2rem !important;
+  }
+  .zoro-adaptive-stock-badge-{{ block.id }}.zoro-adaptive-stock-badge--cart-line {
+    display: inline-flex !important;
+    width: auto;
+    max-width: 100%;
+    margin: .55rem 0 .25rem;
+    padding: .24rem .5rem;
+    border-radius: 999px;
+    font-size: .88em;
+    line-height: 1.2;
+    box-shadow: none;
+  }
+  cart-drawer,
+  cart-notification,
+  .cart-drawer,
+  .drawer,
+  .drawer__inner,
+  #CartDrawer,
+  [id*="CartDrawer"],
+  [class*="cart-drawer"],
+  [class*="drawer"] {
+    z-index: 2147483000 !important;
   }
   @keyframes zoro-adaptive-pulse-{{ block.id }} {
     0% { box-shadow: 0 0 0 0 color-mix(in srgb, {{ block.settings.warning_color }} 44%, transparent); transform: scale(.9); }
@@ -2043,12 +2065,16 @@
       return isVisible(node);
     };
 
-    const placeBadge = (target, key, badge, selector) => {
+    const placeBadge = (target, key, badge, selector, mode = '') => {
       const existing = target?.querySelector(`[data-zoro-adaptive-stock="${key}"]`);
-      if (existing) return isVisible(existing);
+      if (existing) {
+        if (mode === 'cart') existing.classList.add('zoro-adaptive-stock-badge--cart-line');
+        return isVisible(existing);
+      }
       if (!target) return false;
       const anchor = target.querySelector(selector);
       const node = makeBadge(key, badge);
+      if (mode === 'cart') node.classList.add('zoro-adaptive-stock-badge--cart-line');
       (anchor || target).insertAdjacentElement('afterend', node);
       return isVisible(node);
     };
@@ -2124,7 +2150,8 @@
           cartLineFor(item),
           key,
           badge,
-          '.cart-item__details, .cart-item__name, .cart__meta, td, h3, a'
+          '.cart-item__details, .cart-item__name, .cart__meta, td, h3, a',
+          'cart'
         )) placed += 1;
       });
 
