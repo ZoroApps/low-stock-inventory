@@ -124,6 +124,7 @@ test('main low stock block adapts to collection and cart pages', () => {
   assert.match(block, /productPagePriceTarget/);
   assert.match(block, /placeProductRootNearPrice/);
   assert.match(block, /placeRootNearProductPrice/);
+  assert.match(block, /placeRootNearPurchaseControls/);
   assert.match(block, /purchaseTarget/);
   assert.match(block, /productPurchaseTarget/);
   assert.match(block, /add to cart\|buy it now\|sold out/);
@@ -158,7 +159,7 @@ test('main low stock block adapts to collection and cart pages', () => {
   assert.match(block, /node\.style\.top = `\$\{top\}px`/);
   assert.match(block, /data-zoro-portal-message/);
   assert.match(block, /lastPortalRender = \{ copy, count, progressVisible, soldOut \}/);
-  assert.match(block, /if \(pageType === 'product'\) \{\s*root\.dataset\.cardMode = 'true';\s*inventory\.hidden = true;\s*root\.hidden = true;\s*renderProductPortal\(copy, count, progressVisible, soldOut\);\s*retryProductPlacement\(\);\s*return;/);
+  assert.match(block, /if \(pageType === 'product'\) \{\s*root\.dataset\.cardMode = 'true';\s*inventory\.hidden = false;\s*root\.hidden = false;\s*if \(portal\) portal\.hidden = true;\s*if \(!placeRootNearPurchaseControls\(\)\) \{\s*inventory\.hidden = true;\s*root\.hidden = true;\s*renderProductPortal\(copy, count, progressVisible, soldOut\);\s*retryProductPlacement\(\);\s*\}\s*return;/);
   assert.match(block, /if \(lastPortalRender\) \{\s*renderProductPortal\(/);
   assert.match(block, /root\.hidden = false/);
   assert.match(block, /root\.dataset\.productPlacement = 'price'/);
