@@ -140,7 +140,7 @@ test('main low stock block adapts to collection and cart pages', () => {
   assert.doesNotMatch(block, /const purchase = purchaseTarget\(\);\s*if \(purchase\) return purchase;/);
   assert.match(block, /\[data-product-placement="price"\]/);
   assert.match(block, /overflow-wrap: anywhere/);
-  assert.match(block, /const portalTarget = \(\) => exactCurrentPriceTarget\(\) \|\| visiblePriceTarget\(\) \|\| purchaseTarget\(\)/);
+  assert.match(block, /const portalTarget = \(\) => pageType === 'product'\s*\? purchaseTarget\(\) \|\| exactCurrentPriceTarget\(\) \|\| visiblePriceTarget\(\)\s*: exactCurrentPriceTarget\(\) \|\| visiblePriceTarget\(\) \|\| purchaseTarget\(\)/);
   assert.match(block, /const purchaseColumnBox = \(\) =>/);
   assert.match(block, /const productPurchaseColumnBox = \(\) =>/);
   assert.match(block, /box\.width <= window\.innerWidth \* 0\.62 && overlap > columnBox\.width \* 0\.5/);
@@ -149,8 +149,8 @@ test('main low stock block adapts to collection and cart pages', () => {
   assert.match(block, /positionProductPortal/);
   assert.match(block, /node\.classList\.add\('zoro-stock--floating-purchase'\)/);
   assert.match(block, /zoro-stock--inline-price/);
-  assert.match(block, /const formTarget = productForm\(\)/);
-  assert.match(block, /\? \{ node: formTarget, mode: 'before' \}/);
+  assert.match(block, /const purchaseColumnTarget = purchaseTarget\(\)/);
+  assert.match(block, /\? purchaseColumnTarget/);
   assert.match(block, /: productPriceTarget\(\)/);
   assert.match(block, /resolvedInlineTarget\.node\.insertAdjacentElement\('beforebegin', node\)/);
   assert.match(block, /document\.body\.appendChild\(portal\)/);
