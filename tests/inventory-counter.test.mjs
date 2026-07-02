@@ -109,7 +109,7 @@ test('main low stock block adapts to collection and cart pages', () => {
   assert.match(block, /data-zoro-collection-products="{{ block\.id }}"/);
   assert.match(block, /data-zoro-cart-items="{{ block\.id }}"/);
   assert.match(block, /data-zoro-adaptive-list/);
-  assert.match(block, /renderInline\(inlineEntries\)/);
+  assert.doesNotMatch(block, /renderInline\(inlineEntries\)/);
   assert.match(block, /window\.CSS\?\.escape/);
   assert.match(block, /productCardFor\(product\)/);
   assert.match(block, /relatedProductCards/);
