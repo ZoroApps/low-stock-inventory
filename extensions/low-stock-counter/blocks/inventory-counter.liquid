@@ -273,13 +273,15 @@
     display: block !important;
     width: 100%;
     max-width: 100%;
-    margin: .65rem 0 .9rem !important;
+    margin: .9rem 0 1.15rem !important;
     padding: .32rem .55rem !important;
     border-radius: 20px !important;
     background: var(--zoro-bg);
     box-shadow: none !important;
     clear: both;
     align-self: stretch;
+    position: static !important;
+    z-index: auto !important;
   }
   #LowStockCounter-{{ block.id }}[data-product-placement="price"] .zoro-stock__track {
     display: none !important;
@@ -311,12 +313,12 @@
     background: var(--zoro-bg);
   }
   #LowStockCounterPortal-{{ block.id }}.zoro-stock--floating-purchase {
-    position: absolute;
+    position: static;
     z-index: 2;
     width: var(--zoro-floating-width, min(100%, 28rem));
     max-width: calc(100vw - 2rem);
-    margin: 0;
-    pointer-events: none;
+    margin: .9rem 0 1.15rem;
+    pointer-events: auto;
   }
   #LowStockCounterPortal-{{ block.id }}.zoro-stock--inline-price {
     position: static !important;
@@ -568,12 +570,12 @@
     box-shadow: 0 .25rem .75rem rgba(0, 0, 0, .12);
   }
   .zoro-adaptive-stock-badge-{{ block.id }}.zoro-adaptive-stock-badge--product-price {
-    position: absolute;
+    position: static;
     z-index: 2;
-    margin: 0;
+    margin: .9rem 0 1.15rem;
     max-width: min(var(--zoro-product-badge-width, 22rem), calc(100vw - 1.5rem));
     box-shadow: 0 .25rem .75rem rgba(0, 0, 0, .10);
-    pointer-events: none;
+    pointer-events: auto;
   }
   .zoro-adaptive-stock-badge-{{ block.id }}.zoro-adaptive-stock-badge--product-price-inline {
     position: static !important;
@@ -747,25 +749,27 @@
       ].join(', ')) || node;
 
     const purchaseTarget = () => {
-      const form = productForm();
-      if (visibleBox(form)) return { node: form, mode: 'before' };
-
       const purchaseButton = purchaseButtons()[0];
-      if (!purchaseButton) return null;
+      if (purchaseButton) {
+        const shell = purchaseShell(purchaseButton);
+        const shellBox = visibleBox(shell);
+        if (shellBox && shellBox.width <= window.innerWidth * 0.62) {
+          return {
+            node: shell,
+            mode: 'before'
+          };
+        }
 
-      const shell = purchaseShell(purchaseButton);
-      const shellBox = visibleBox(shell);
-      if (shellBox && shellBox.width <= window.innerWidth * 0.62) {
         return {
-          node: shell,
+          node: purchaseButton,
           mode: 'before'
         };
       }
 
-      return {
-        node: purchaseButton,
-        mode: 'before'
-      };
+      const form = productForm();
+      if (visibleBox(form)) return { node: form, mode: 'before' };
+
+      return null;
     };
 
     const visiblePriceTarget = () => {
@@ -975,7 +979,10 @@
 
     const placeRootNearPurchaseControls = () => {
       if (pageType !== 'product') return false;
-      const target = productPriceTarget() || purchaseTarget();
+      const purchase = purchaseTarget();
+      const target = purchase?.node
+        ? { node: purchase.node, mode: 'before' }
+        : productPriceTarget();
       if (!target?.node || target.node.contains(root) || root.contains(target.node)) return false;
 
       if (target.mode === 'before') {
@@ -1003,6 +1010,9 @@
       const previousHidden = node.hidden;
       node.hidden = false;
       node.classList.add('zoro-stock--floating-purchase');
+      node.style.removeProperty('--zoro-floating-width');
+      node.style.removeProperty('left');
+      node.style.removeProperty('top');
 
       const box = target.node.getBoundingClientRect();
       const columnBox = purchaseColumnBox() || box;
@@ -1063,44 +1073,25 @@
       node.style.setProperty('display', 'block', 'important');
       node.style.setProperty('width', '100%', 'important');
       node.style.setProperty('clear', 'both', 'important');
-      node.style.setProperty('margin-top', '.65rem', 'important');
-      node.style.setProperty('margin-bottom', reserveFormGap ? '4rem' : '.9rem', 'important');
-      node.style.setProperty('position', 'relative', 'important');
-      node.style.setProperty('z-index', '1', 'important');
+      node.style.setProperty('margin-top', '.9rem', 'important');
+      node.style.setProperty('margin-bottom', reserveFormGap ? '1.25rem' : '.9rem', 'important');
+      node.style.setProperty('position', 'static', 'important');
+      node.style.setProperty('z-index', 'auto', 'important');
 
       if (!reserveFormGap) {
         document.getElementById('LowStockCounterSpacer-{{ block.id }}')?.remove();
         return;
       }
 
-      let spacer = document.getElementById('LowStockCounterSpacer-{{ block.id }}');
-      if (!spacer) {
-        spacer = document.createElement('div');
-        spacer.id = 'LowStockCounterSpacer-{{ block.id }}';
-        spacer.setAttribute('aria-hidden', 'true');
-      }
-      if (node.nextElementSibling !== spacer) {
-        node.insertAdjacentElement('afterend', spacer);
-      }
-      spacer.style.setProperty('display', 'block', 'important');
-      spacer.style.setProperty('height', '4rem', 'important');
-      spacer.style.setProperty('min-height', '4rem', 'important');
-      spacer.style.setProperty('clear', 'both', 'important');
-      spacer.style.setProperty('pointer-events', 'none', 'important');
-
-      const next = spacer.nextElementSibling;
-      if (next && next !== root && !root.contains(next)) {
-        next.style.setProperty('margin-top', '4rem', 'important');
-        next.style.setProperty('padding-top', '1rem', 'important');
-      }
+      document.getElementById('LowStockCounterSpacer-{{ block.id }}')?.remove();
 
       if (followingNode && followingNode !== root && !root.contains(followingNode)) {
-        followingNode.style.setProperty('margin-top', '6rem', 'important');
-        followingNode.style.setProperty('padding-top', '2rem', 'important');
+        followingNode.style.setProperty('margin-top', '1.25rem', 'important');
+        followingNode.style.setProperty('padding-top', '0', 'important');
       }
 
       productPurchaseButtons().forEach((button) => {
-        button.style.setProperty('margin-top', '4.5rem', 'important');
+        button.style.setProperty('margin-top', '.75rem', 'important');
       });
     };
 
@@ -1685,25 +1676,27 @@
     };
 
     const productPurchaseTarget = () => {
-      const form = productFormTarget();
-      if (visibleBox(form)) return { node: form, mode: 'before' };
-
       const purchaseButton = productPurchaseButtons()[0];
-      if (!purchaseButton) return null;
+      if (purchaseButton) {
+        const shell = purchaseShell(purchaseButton);
+        const shellBox = visibleBox(shell);
+        if (shellBox && shellBox.width <= window.innerWidth * 0.62) {
+          return {
+            node: shell,
+            mode: 'before'
+          };
+        }
 
-      const shell = purchaseShell(purchaseButton);
-      const shellBox = visibleBox(shell);
-      if (shellBox && shellBox.width <= window.innerWidth * 0.62) {
         return {
-          node: shell,
+          node: purchaseButton,
           mode: 'before'
         };
       }
 
-      return {
-        node: purchaseButton,
-        mode: 'before'
-      };
+      const form = productFormTarget();
+      if (visibleBox(form)) return { node: form, mode: 'before' };
+
+      return null;
     };
 
     const productVisiblePriceTarget = () => {
@@ -2092,9 +2085,7 @@
         if (placeOverlayBadge(productCardFor(product), key, badge)) placed += 1;
       });
 
-      if (inlineEntries.length && placed === 0) {
-        renderInline(inlineEntries);
-      } else if (!cartSource) {
+      if (!cartSource || inlineEntries.length || placed === 0) {
         clearInline();
       }
     };
@@ -2155,9 +2146,7 @@
         )) placed += 1;
       });
 
-      if (inlineEntries.length && placed === 0) {
-        renderInline(inlineEntries);
-      } else if (!collectionSource) {
+      if (!collectionSource || inlineEntries.length || placed === 0) {
         clearInline();
       }
     };
