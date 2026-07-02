@@ -290,6 +290,14 @@
     display: inline-flex;
     width: auto;
   }
+  #LowStockCounter-{{ block.id }}[data-product-placement="price"] + form,
+  #LowStockCounter-{{ block.id }}[data-product-placement="price"] + product-form,
+  #LowStockCounter-{{ block.id }}[data-product-placement="price"] + .product-form,
+  #LowStockCounter-{{ block.id }}[data-product-placement="price"] + [class*="product-form"],
+  #LowStockCounter-{{ block.id }}[data-product-placement="price"] + [class*="buy-buttons"],
+  #LowStockCounter-{{ block.id }}[data-product-placement="price"] + button {
+    margin-top: 1.75rem !important;
+  }
   #LowStockCounterPortal-{{ block.id }}[hidden] { display: none; }
   #LowStockCounterPortal-{{ block.id }} {
     box-sizing: border-box;
@@ -590,7 +598,7 @@
   .zoro-adaptive-stock-badge-{{ block.id }}.zoro-adaptive-stock-badge--product-price-inline + *,
   .zoro-adaptive-stock-badge-{{ block.id }}.zoro-adaptive-stock-badge--product-price-inline + form,
   .zoro-adaptive-stock-badge-{{ block.id }}.zoro-adaptive-stock-badge--product-price-inline + product-form {
-    margin-top: 2rem !important;
+    margin-top: 1.75rem !important;
   }
   .zoro-adaptive-stock-badge-{{ block.id }}.zoro-adaptive-stock-badge--cart-line {
     display: inline-flex !important;
@@ -1086,12 +1094,12 @@
       document.getElementById('LowStockCounterSpacer-{{ block.id }}')?.remove();
 
       if (followingNode && followingNode !== root && !root.contains(followingNode)) {
-        followingNode.style.setProperty('margin-top', '1.25rem', 'important');
+        followingNode.style.setProperty('margin-top', '1.75rem', 'important');
         followingNode.style.setProperty('padding-top', '0', 'important');
       }
 
       productPurchaseButtons().forEach((button) => {
-        button.style.setProperty('margin-top', '.75rem', 'important');
+        button.style.setProperty('margin-top', '1.5rem', 'important');
       });
     };
 
@@ -1845,6 +1853,28 @@
       return true;
     };
 
+    const reserveProductPurchaseSpace = (badgeNode, anchorNode = null) => {
+      if (!badgeNode) return;
+
+      document.getElementById('LowStockAdaptiveSpacer-{{ block.id }}')?.remove();
+      badgeNode.style.setProperty('position', 'static', 'important');
+      badgeNode.style.setProperty('z-index', 'auto', 'important');
+      badgeNode.style.setProperty('margin-top', '.9rem', 'important');
+      badgeNode.style.setProperty('margin-bottom', '1.25rem', 'important');
+      badgeNode.style.removeProperty('left');
+      badgeNode.style.removeProperty('top');
+      badgeNode.style.removeProperty('--zoro-product-badge-width');
+
+      if (anchorNode && anchorNode !== badgeNode && !badgeNode.contains(anchorNode)) {
+        anchorNode.style.setProperty('margin-top', '1.75rem', 'important');
+        anchorNode.style.setProperty('padding-top', '0', 'important');
+      }
+
+      productPurchaseButtons().forEach((button) => {
+        button.style.setProperty('margin-top', '1.5rem', 'important');
+      });
+    };
+
     const renderProductPriceBadge = (badge) => {
       const anchor = productPriceAnchor();
       if (!anchor?.node) {
@@ -1870,32 +1900,7 @@
         } else {
           anchor.node.insertAdjacentElement('afterend', productPriceBadge);
         }
-        productPriceBadge.style.setProperty('margin-top', '1.25rem', 'important');
-        productPriceBadge.style.setProperty('margin-bottom', '3rem', 'important');
-        productPriceBadge.style.setProperty('position', 'relative', 'important');
-        productPriceBadge.style.setProperty('z-index', '1', 'important');
-        let spacer = document.getElementById('LowStockAdaptiveSpacer-{{ block.id }}');
-        if (!spacer) {
-          spacer = document.createElement('div');
-          spacer.id = 'LowStockAdaptiveSpacer-{{ block.id }}';
-          spacer.setAttribute('aria-hidden', 'true');
-        }
-        if (productPriceBadge.nextElementSibling !== spacer) {
-          productPriceBadge.insertAdjacentElement('afterend', spacer);
-        }
-        spacer.style.setProperty('display', 'block', 'important');
-        spacer.style.setProperty('height', '1.5rem', 'important');
-        spacer.style.setProperty('min-height', '1.5rem', 'important');
-        spacer.style.setProperty('clear', 'both', 'important');
-        spacer.style.setProperty('pointer-events', 'none', 'important');
-        const next = spacer.nextElementSibling;
-        if (next) {
-          next.style.setProperty('margin-top', '3.75rem', 'important');
-          next.style.setProperty('padding-top', '1rem', 'important');
-        }
-        productPurchaseButtons().forEach((button) => {
-          button.style.setProperty('margin-top', '2.5rem', 'important');
-        });
+        reserveProductPurchaseSpace(productPriceBadge, anchor.mode === 'before' ? anchor.node : null);
         productPriceBadge.hidden = false;
         if (isVisible(productPriceBadge)) return true;
       }
