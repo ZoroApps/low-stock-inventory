@@ -2,27 +2,14 @@
   assign active_variant = product.selected_or_first_available_variant
   assign threshold = block.settings.low_stock_threshold | default: 10
   assign is_product_page = false
-
   if request.page_type == 'product' and product != blank
     assign is_product_page = true
-  endif
-
-  assign product_design_mode = false
-  if request.design_mode and is_product_page
-    assign product_design_mode = true
   endif
 
   assign low_message = block.settings.alert_text
   assign general_message = block.settings.general_low_stock_text
   assign untracked_message = block.settings.untracked_text
   assign sold_out_message = block.settings.sold_out_text
-  assign editor_message = block.settings.editor_help_text
-  assign companion_product = block.settings.companion_product
-  assign has_companion = false
-
-  if is_product_page and companion_product != blank and companion_product.id != product.id
-    assign has_companion = true
-  endif
 
   case block.settings.message_language
     when 'auto'
@@ -30,43 +17,32 @@
       assign general_message = 'inventory_counter.low_stock_general' | t
       assign untracked_message = 'inventory_counter.untracked' | t
       assign sold_out_message = 'inventory_counter.sold_out' | t
-      assign editor_message = 'inventory_counter.editor_help' | t
     when 'en'
       assign low_message = 'Hurry! Only [count] items left in stock!'
       assign general_message = 'Low stock - order soon!'
       assign untracked_message = 'Popular right now'
       assign sold_out_message = 'This item is currently sold out.'
-      assign editor_message = 'Open a product template and place this block below the price.'
     when 'es'
       assign low_message = 'Date prisa. Solo quedan [count] unidades.'
       assign general_message = 'Quedan pocas unidades. Haz tu pedido pronto.'
       assign untracked_message = 'Muy popular ahora'
-      assign sold_out_message = 'Este artículo está agotado.'
-      assign editor_message = 'Abre una plantilla de producto y coloca este bloque debajo del precio.'
+      assign sold_out_message = 'Este articulo esta agotado.'
     when 'fr'
-      assign low_message = 'Dépêchez-vous, il ne reste que [count] articles.'
-      assign general_message = 'Stock faible, commandez bientôt.'
-      assign untracked_message = 'Très populaire en ce moment'
-      assign sold_out_message = 'Cet article est actuellement épuisé.'
-      assign editor_message = 'Ouvrez un modèle de produit et placez ce bloc sous le prix.'
+      assign low_message = 'Depechez-vous, il ne reste que [count] articles.'
+      assign general_message = 'Stock faible, commandez bientot.'
+      assign untracked_message = 'Tres populaire en ce moment'
+      assign sold_out_message = 'Cet article est actuellement epuise.'
     when 'de'
       assign low_message = 'Beeilung! Nur noch [count] Artikel auf Lager.'
-      assign general_message = 'Nur noch wenige verfügbar. Bald bestellen.'
+      assign general_message = 'Nur noch wenige verfugbar. Bald bestellen.'
       assign untracked_message = 'Gerade sehr beliebt'
       assign sold_out_message = 'Dieser Artikel ist derzeit ausverkauft.'
-      assign editor_message = 'Öffne eine Produktvorlage und platziere diesen Block unter dem Preis.'
   endcase
 %}
 
 <div
   id="LowStockCounter-{{ block.id }}"
-  class="
-    zoro-stock
-    zoro-stock--{{ block.settings.layout }}
-    zoro-stock--{{ block.settings.alignment }}
-    {% unless block.settings.show_on_mobile %}zoro-stock--hide-mobile{% endunless %}
-    {% unless block.settings.show_on_desktop %}zoro-stock--hide-desktop{% endunless %}
-  "
+  class="zoro-stock zoro-stock--{{ block.settings.layout }} zoro-stock--{{ block.settings.alignment }}{% unless block.settings.show_on_mobile %} zoro-stock--hide-mobile{% endunless %}{% unless block.settings.show_on_desktop %} zoro-stock--hide-desktop{% endunless %}"
   style="
     --zoro-bg: {{ block.settings.background_color }};
     --zoro-text: {{ block.settings.text_color }};
@@ -74,68 +50,45 @@
     --zoro-track: {{ block.settings.track_color }};
     --zoro-badge-bg: {{ block.settings.badge_background }};
     --zoro-badge-text: {{ block.settings.badge_text_color }};
-    --zoro-button-bg: {{ block.settings.button_background }};
-    --zoro-button-text: {{ block.settings.button_text_color }};
     --zoro-radius: {{ block.settings.corner_radius }}px;
     --zoro-size: {{ block.settings.font_size }}px;
     --zoro-mobile-size: {{ block.settings.mobile_font_size }}px;
-    --zoro-top-space: {{ block.settings.top_spacing }}px;
     --zoro-progress-height: {{ block.settings.progress_height }}px;
   "
   data-zoro-stock
+  data-page-type="{{ request.page_type }}"
+  data-product-page="{{ is_product_page }}"
   data-product-id="{{ product.id }}"
   data-current-handle="{{ product.handle }}"
   data-current-money="{{ active_variant.price | money | strip_html | escape }}"
   data-current-price="{{ active_variant.price | money_without_currency | escape }}"
   data-variant-id="{{ active_variant.id }}"
-  data-page-type="{{ request.page_type }}"
-  data-product-page="{{ is_product_page }}"
-  data-design-mode="{{ product_design_mode }}"
   data-threshold="{{ threshold }}"
-  data-display-mode="{{ block.settings.display_mode | default: 'always' }}"
-  data-related-display="{{ block.settings.related_display | default: 'simple' }}"
+  data-display-mode="{{ block.settings.display_mode }}"
+  data-related-display="{{ block.settings.related_display }}"
   data-low-message="{{ low_message | escape }}"
   data-general-message="{{ general_message | escape }}"
   data-untracked-message="{{ untracked_message | escape }}"
   data-sold-out-message="{{ sold_out_message | escape }}"
-  data-editor-message="{{ editor_message | escape }}"
   data-count-display="{{ block.settings.count_display }}"
   data-show-untracked="{{ block.settings.show_untracked }}"
   data-show-sold-out="{{ block.settings.show_sold_out }}"
   data-show-progress="{{ block.settings.show_progress }}"
-  data-has-companion="{{ has_companion }}"
-  data-add-both-text="{{ block.settings.add_both_text | escape }}"
-  data-adding-text="{{ block.settings.adding_text | escape }}"
-  data-added-text="{{ block.settings.added_text | escape }}"
-  data-add-error-text="{{ block.settings.add_error_text | escape }}"
-  data-after-add="{{ block.settings.after_add }}"
   hidden
   {{ block.shopify_attributes }}
 >
-  <div data-zoro-inventory>
-    <div class="zoro-stock__alert" role="status" aria-live="polite" aria-atomic="true">
-      {% if block.settings.show_pulse %}
-        <span class="zoro-stock__pulse" aria-hidden="true"></span>
-      {% endif %}
-      <span data-zoro-message></span>
-      {% if block.settings.show_sold_out_badge %}
-        <span class="zoro-stock__badge" data-zoro-sold-out-badge hidden>
-          {{ block.settings.sold_out_badge_text }}
-        </span>
-      {% endif %}
-    </div>
+  <div class="zoro-stock__alert" role="status" aria-live="polite" aria-atomic="true">
+    {% if block.settings.show_pulse %}
+      <span class="zoro-stock__pulse" aria-hidden="true"></span>
+    {% endif %}
+    <span data-zoro-message></span>
+    {% if block.settings.show_sold_out_badge %}
+      <span class="zoro-stock__badge" data-zoro-sold-out-badge hidden>{{ block.settings.sold_out_badge_text }}</span>
+    {% endif %}
+  </div>
 
-    <div
-      class="zoro-stock__track"
-      data-zoro-progress
-      role="progressbar"
-      aria-label="Stock remaining"
-      aria-valuemin="0"
-      aria-valuemax="{{ threshold }}"
-      aria-valuenow="0"
-    >
-      <span class="zoro-stock__fill" data-zoro-fill></span>
-    </div>
+  <div class="zoro-stock__track" data-zoro-progress role="progressbar" aria-label="Stock remaining" aria-valuemin="0" aria-valuemax="{{ threshold }}" aria-valuenow="0">
+    <span class="zoro-stock__fill" data-zoro-fill></span>
   </div>
 
   <script type="application/json" data-zoro-variants>
@@ -151,59 +104,6 @@
       {% endfor %}
     ]
   </script>
-
-  {% if has_companion %}
-    <div class="zoro-stock__pair" data-zoro-pair>
-      {% if companion_product.featured_image %}
-        {{
-          companion_product.featured_image
-          | image_url: width: 160
-          | image_tag:
-            class: 'zoro-stock__pair-image',
-            loading: 'lazy',
-            widths: '80, 120, 160',
-            alt: companion_product.title
-        }}
-      {% endif %}
-      <div class="zoro-stock__pair-details">
-        <strong>{{ block.settings.companion_heading }}</strong>
-        <span>{{ companion_product.title }} · {{ companion_product.price | money }}</span>
-        {% if companion_product.variants.size > 1 %}
-          <label class="zoro-stock__variant-label">
-            <span class="visually-hidden">{{ companion_product.title }}</span>
-            <select data-zoro-companion-variant>
-              {% for variant in companion_product.variants %}
-                <option
-                  value="{{ variant.id }}"
-                  {% unless variant.available %}disabled{% endunless %}
-                  {% if variant == companion_product.selected_or_first_available_variant %}selected{% endif %}
-                >
-                  {{ variant.title }}{% unless variant.available %} - {{ block.settings.sold_out_badge_text }}{% endunless %}
-                </option>
-              {% endfor %}
-            </select>
-          </label>
-        {% else %}
-          <input
-            type="hidden"
-            data-zoro-companion-variant
-            value="{{ companion_product.selected_or_first_available_variant.id }}"
-          >
-        {% endif %}
-      </div>
-      <button
-        class="zoro-stock__pair-button"
-        type="button"
-        data-zoro-add-both
-        {% unless companion_product.selected_or_first_available_variant.available %}disabled{% endunless %}
-      >
-        {{ block.settings.add_both_text }}
-      </button>
-      <span class="zoro-stock__pair-status" data-zoro-pair-status role="status" aria-live="polite"></span>
-    </div>
-  {% endif %}
-
-  <div class="zoro-stock__adaptive-list" data-zoro-adaptive-list hidden></div>
 </div>
 
 {% if collection != blank %}
@@ -230,195 +130,60 @@
   </script>
 {% endif %}
 
-{% if cart != blank and request.page_type == 'cart' %}
-  <script type="application/json" data-zoro-cart-items="{{ block.id }}">
-    [
-      {% for item in cart.items %}
-        {% liquid
-          assign cart_variant = item.variant
-          assign cart_tracked = false
-          if cart_variant.inventory_management != blank and cart_variant.inventory_policy != 'continue'
-            assign cart_tracked = true
-          endif
-        %}
-        {
-          "key": {{ item.key | json }},
-          "title": {{ item.product.title | json }},
-          "url": {{ item.url | json }},
-          "variantId": {{ cart_variant.id | json }},
-          "available": {{ cart_variant.available | json }},
-          "quantity": {{ cart_variant.inventory_quantity | json }},
-          "tracked": {{ cart_tracked | json }}
-        }{% unless forloop.last %},{% endunless %}
-      {% endfor %}
-    ]
-  </script>
-{% endif %}
-
 <style>
   #LowStockCounter-{{ block.id }} {
     box-sizing: border-box;
     width: 100%;
-    margin-top: var(--zoro-top-space);
-    color: var(--zoro-text);
-    font-family: var(--font-body-family, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
-    font-size: var(--zoro-size);
-  }
-  #LowStockCounter-{{ block.id }}[hidden] { display: none; }
-  #LowStockCounter-{{ block.id }}[data-card-mode="true"]:not([data-product-placement="price"]) {
-    display: none !important;
-  }
-  [data-zoro-adaptive-stock*="{{ block.id }}-current-"] { display: none !important; }
-  #LowStockCounter-{{ block.id }}[data-product-placement="price"] {
-    display: block !important;
-    width: 100%;
     max-width: 100%;
-    margin: .9rem 0 1.15rem !important;
-    padding: .32rem .55rem !important;
-    border-radius: 20px !important;
-    background: var(--zoro-bg);
-    box-shadow: none !important;
-    clear: both;
-    align-self: stretch;
-    position: static !important;
-    z-index: auto !important;
-  }
-  #LowStockCounter-{{ block.id }}[data-product-placement="price"] .zoro-stock__track {
-    display: none !important;
-  }
-  #LowStockCounter-{{ block.id }}[data-product-placement="price"] .zoro-stock__alert {
-    display: inline-flex;
-    width: auto;
-  }
-  #LowStockCounter-{{ block.id }}[data-product-placement="price"] + form,
-  #LowStockCounter-{{ block.id }}[data-product-placement="price"] + product-form,
-  #LowStockCounter-{{ block.id }}[data-product-placement="price"] + .product-form,
-  #LowStockCounter-{{ block.id }}[data-product-placement="price"] + [class*="product-form"],
-  #LowStockCounter-{{ block.id }}[data-product-placement="price"] + [class*="buy-buttons"],
-  #LowStockCounter-{{ block.id }}[data-product-placement="price"] + button {
-    margin-top: 1.75rem !important;
-  }
-  #LowStockCounterPortal-{{ block.id }}[hidden] { display: none; }
-  #LowStockCounterPortal-{{ block.id }} {
-    box-sizing: border-box;
-    width: 100%;
-    margin-top: var(--zoro-top-space);
-    margin-bottom: .75rem;
+    margin: 1rem 0 1.35rem;
+    padding: .55rem .7rem;
+    border: 1px solid color-mix(in srgb, var(--zoro-accent) 18%, transparent);
+    border-radius: var(--zoro-radius);
     color: var(--zoro-text);
+    background: var(--zoro-bg);
     font-family: var(--font-body-family, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
     font-size: var(--zoro-size);
-  }
-  #LowStockCounterPortal-{{ block.id }}.zoro-stock--card {
-    padding: .75rem .875rem;
-    border: 1px solid color-mix(in srgb, var(--zoro-accent) 22%, transparent);
-    border-radius: var(--zoro-radius);
-    background: var(--zoro-bg);
-    box-shadow: 0 1px 0 rgba(0, 0, 0, .04);
-  }
-  #LowStockCounterPortal-{{ block.id }}.zoro-stock--compact {
-    padding: .5rem .625rem;
-    border-radius: var(--zoro-radius);
-    background: var(--zoro-bg);
-  }
-  #LowStockCounterPortal-{{ block.id }}.zoro-stock--floating-purchase {
+    line-height: 1.3;
+    clear: both;
     position: static;
-    z-index: 2;
-    width: var(--zoro-floating-width, min(100%, 28rem));
-    max-width: calc(100vw - 2rem);
-    margin: .9rem 0 1.15rem;
-    pointer-events: auto;
+    z-index: 0;
   }
-  #LowStockCounterPortal-{{ block.id }}.zoro-stock--inline-price {
-    position: static !important;
-    z-index: 1;
+  #LowStockCounter-{{ block.id }}[hidden] { display: none !important; }
+  #LowStockCounter-{{ block.id }}[data-zoro-inline="price"] {
     display: block !important;
-    clear: both;
-    width: 100%;
-    max-width: 100%;
-    margin: .65rem 0 .9rem !important;
-    pointer-events: auto;
-  }
-  #LowStockCounterPortal-{{ block.id }}.zoro-stock--inline-price .zoro-stock__track {
-    display: none !important;
-  }
-  #LowStockCounterPortal-{{ block.id }}.zoro-stock--inline-price + *,
-  #LowStockCounterPortal-{{ block.id }}.zoro-stock--inline-price + form,
-  #LowStockCounterPortal-{{ block.id }}.zoro-stock--inline-price + product-form {
-    margin-top: 1rem !important;
-  }
-  #LowStockCounterPortal-{{ block.id }} .zoro-stock__alert {
-    display: flex;
-    align-items: center;
-    gap: .625rem;
-    font-weight: 600;
-    line-height: 1.35;
-  }
-  #LowStockCounterPortal-{{ block.id }}.zoro-stock--center .zoro-stock__alert { justify-content: center; text-align: center; }
-  #LowStockCounterPortal-{{ block.id }}.zoro-stock--right .zoro-stock__alert { justify-content: flex-end; text-align: right; }
-  #LowStockCounterPortal-{{ block.id }} .zoro-stock__pulse {
-    flex: 0 0 auto;
-    width: .5rem;
-    height: .5rem;
-    border-radius: 50%;
-    background: var(--zoro-accent);
-    animation: zoro-pulse-{{ block.id }} 1.6s ease-out infinite;
-  }
-  #LowStockCounterPortal-{{ block.id }} .zoro-stock__track {
-    height: var(--zoro-progress-height);
-    margin-top: .625rem;
-    overflow: hidden;
-    border-radius: 999px;
-    background: var(--zoro-track);
-  }
-  #LowStockCounterPortal-{{ block.id }} .zoro-stock__fill {
-    display: block;
-    width: 0;
-    height: 100%;
-    border-radius: inherit;
-    background: var(--zoro-accent);
-    transition: width 320ms ease;
-  }
-  #LowStockCounterPortal-{{ block.id }} .zoro-stock__badge {
-    flex: 0 0 auto;
-    padding: .2rem .5rem;
-    border-radius: 999px;
-    color: var(--zoro-badge-text);
-    background: var(--zoro-badge-bg);
-    font-size: .82em;
-    font-weight: 700;
-  }
-  #LowStockCounter-{{ block.id }}.zoro-stock--card {
-    padding: .75rem .875rem;
-    border: 1px solid color-mix(in srgb, var(--zoro-accent) 22%, transparent);
-    border-radius: var(--zoro-radius);
-    background: var(--zoro-bg);
-    box-shadow: 0 1px 0 rgba(0, 0, 0, .04);
+    position: static !important;
+    z-index: 0 !important;
+    margin-top: .85rem !important;
+    margin-bottom: 1.75rem !important;
   }
   #LowStockCounter-{{ block.id }}.zoro-stock--compact {
-    padding: .5rem .625rem;
-    border-radius: var(--zoro-radius);
-    background: var(--zoro-bg);
+    padding: .42rem .6rem;
+    border-radius: 999px;
+  }
+  #LowStockCounter-{{ block.id }}.zoro-stock--text {
+    padding: 0;
+    border: 0;
+    background: transparent;
   }
   #LowStockCounter-{{ block.id }} .zoro-stock__alert {
     display: flex;
     align-items: center;
-    gap: .625rem;
-    font-weight: 600;
-    line-height: 1.35;
+    gap: .55rem;
+    font-weight: 700;
   }
   #LowStockCounter-{{ block.id }}.zoro-stock--center .zoro-stock__alert { justify-content: center; text-align: center; }
   #LowStockCounter-{{ block.id }}.zoro-stock--right .zoro-stock__alert { justify-content: flex-end; text-align: right; }
   #LowStockCounter-{{ block.id }} .zoro-stock__pulse {
     flex: 0 0 auto;
-    width: .5rem;
-    height: .5rem;
+    width: .45rem;
+    height: .45rem;
     border-radius: 50%;
     background: var(--zoro-accent);
     animation: zoro-pulse-{{ block.id }} 1.6s ease-out infinite;
   }
   #LowStockCounter-{{ block.id }} .zoro-stock__track {
     height: var(--zoro-progress-height);
-    margin-top: .625rem;
+    margin-top: .55rem;
     overflow: hidden;
     border-radius: 999px;
     background: var(--zoro-track);
@@ -429,1597 +194,331 @@
     height: 100%;
     border-radius: inherit;
     background: var(--zoro-accent);
-    transition: width 320ms ease;
+    transition: width 260ms ease;
   }
-  #LowStockCounter-{{ block.id }} .zoro-stock__badge {
-    flex: 0 0 auto;
-    padding: .2rem .5rem;
+  #LowStockCounter-{{ block.id }} .zoro-stock__badge,
+  .zoro-adaptive-stock-badge-{{ block.id }}[data-state="sold-out"] {
+    padding: .18rem .5rem;
     border-radius: 999px;
-    color: var(--zoro-badge-text);
-    background: var(--zoro-badge-bg);
-    font-size: .82em;
-    font-weight: 700;
-  }
-  #LowStockCounter-{{ block.id }} .zoro-stock__pair {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    align-items: center;
-    gap: .75rem;
-    margin-top: .75rem;
-    padding-top: .75rem;
-    border-top: 1px solid color-mix(in srgb, var(--zoro-text) 14%, transparent);
-  }
-  #LowStockCounter-{{ block.id }} .zoro-stock__pair-image {
-    width: 3rem;
-    height: 3rem;
-    border-radius: calc(var(--zoro-radius) * .65);
-    object-fit: cover;
-  }
-  #LowStockCounter-{{ block.id }} .zoro-stock__pair-details {
-    display: grid;
-    min-width: 0;
-    gap: .2rem;
-  }
-  #LowStockCounter-{{ block.id }} .zoro-stock__pair-details > span {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  #LowStockCounter-{{ block.id }} [data-zoro-companion-variant] {
-    width: 100%;
-    min-height: 2rem;
-    padding: .25rem .5rem;
-    border: 1px solid color-mix(in srgb, var(--zoro-text) 24%, transparent);
-    border-radius: .35rem;
-    color: inherit;
-    background: #fff;
-  }
-  #LowStockCounter-{{ block.id }} .zoro-stock__pair-button {
-    min-height: 2.5rem;
-    padding: .55rem .85rem;
-    border: 0;
-    border-radius: calc(var(--zoro-radius) * .75);
-    color: var(--zoro-button-text);
-    background: var(--zoro-button-bg);
-    font: inherit;
-    font-weight: 700;
-    cursor: pointer;
-  }
-  #LowStockCounter-{{ block.id }} .zoro-stock__pair-button:disabled { cursor: not-allowed; opacity: .55; }
-  #LowStockCounter-{{ block.id }} .zoro-stock__pair-status {
-    grid-column: 1 / -1;
-    min-height: 1em;
-    font-size: .86em;
-  }
-  #LowStockCounter-{{ block.id }} .zoro-stock__adaptive-list {
-    display: grid;
-    gap: .5rem;
-    margin-top: .75rem;
-  }
-  #LowStockCounter-{{ block.id }} .zoro-stock__adaptive-list[hidden] { display: none; }
-  #LowStockCounter-{{ block.id }} .zoro-stock__adaptive-item {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: .5rem;
-    padding: .5rem .625rem;
-    border: 1px solid color-mix(in srgb, var(--zoro-accent) 18%, transparent);
-    border-radius: calc(var(--zoro-radius) * .75);
-    background: color-mix(in srgb, var(--zoro-bg) 86%, white);
-  }
-  #LowStockCounter-{{ block.id }} .zoro-stock__adaptive-title {
-    min-width: 8rem;
-    font-weight: 700;
-  }
-  @keyframes zoro-pulse-{{ block.id }} {
-    0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--zoro-accent) 48%, transparent); transform: scale(.9); }
-    75%, 100% { box-shadow: 0 0 0 .55rem transparent; transform: scale(1); }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    #LowStockCounter-{{ block.id }} .zoro-stock__pulse { animation: none; }
-    #LowStockCounter-{{ block.id }} .zoro-stock__fill { transition: none; }
-  }
-  @media (max-width: 749px) {
-    #LowStockCounter-{{ block.id }} { font-size: var(--zoro-mobile-size); }
-    #LowStockCounter-{{ block.id }}.zoro-stock--hide-mobile { display: none !important; }
-    #LowStockCounter-{{ block.id }}[data-product-placement="price"] {
-      display: block;
-      width: 100%;
-      min-width: 0;
-      margin-left: 0;
-      margin-right: 0;
-      overflow-wrap: anywhere;
-    }
-    #LowStockCounter-{{ block.id }}[data-product-placement="price"] .zoro-stock__alert {
-      justify-content: flex-start;
-      text-align: left;
-    }
-    #LowStockCounter-{{ block.id }} .zoro-stock__pair { grid-template-columns: auto minmax(0, 1fr); }
-    #LowStockCounter-{{ block.id }} .zoro-stock__pair-button { grid-column: 1 / -1; width: 100%; }
-  }
-  @media (min-width: 750px) {
-    #LowStockCounter-{{ block.id }}.zoro-stock--hide-desktop { display: none !important; }
+    color: var(--zoro-badge-text, {{ block.settings.badge_text_color }});
+    background: var(--zoro-badge-bg, {{ block.settings.badge_background }});
+    font-size: .84em;
+    font-weight: 800;
   }
   .zoro-adaptive-stock-badge-{{ block.id }} {
     display: inline-flex;
     align-items: center;
-    gap: .38rem;
+    gap: .35rem;
     width: fit-content;
-    max-width: 100%;
-    margin-top: .45rem;
-    padding: .32rem .55rem;
-    border-radius: 20px;
+    max-width: calc(100% - 1rem);
+    padding: .3rem .5rem;
+    border-radius: 999px;
     color: {{ block.settings.text_color }};
     background: {{ block.settings.background_color }};
     font-family: var(--font-body-family, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
     font-size: {{ block.settings.font_size }}px;
-    font-weight: 700;
-    line-height: 1.25;
+    font-weight: 800;
+    line-height: 1.2;
+    pointer-events: none;
   }
   .zoro-adaptive-stock-badge-{{ block.id }}::before {
     content: "";
-    width: .45rem;
-    height: .45rem;
+    width: .4rem;
+    height: .4rem;
     border-radius: 50%;
     background: {{ block.settings.warning_color }};
-    animation: zoro-adaptive-pulse-{{ block.id }} 1.55s ease-out infinite;
-  }
-  .zoro-adaptive-stock-badge-{{ block.id }}[data-state="sold-out"] {
-    color: {{ block.settings.badge_text_color }};
-    background: {{ block.settings.badge_background }};
+    animation: zoro-pulse-{{ block.id }} 1.6s ease-out infinite;
   }
   .zoro-adaptive-stock-badge-{{ block.id }}.zoro-adaptive-stock-badge--overlay {
     position: absolute;
-    z-index: 3;
-    inset: auto auto .65rem .65rem;
+    inset: auto auto .6rem .6rem;
+    z-index: 2;
     margin: 0;
-    max-width: calc(100% - 1.3rem);
     box-shadow: 0 .25rem .75rem rgba(0, 0, 0, .12);
   }
-  .zoro-adaptive-stock-badge-{{ block.id }}.zoro-adaptive-stock-badge--product-price {
-    position: static;
-    z-index: 2;
-    margin: .9rem 0 1.15rem;
-    max-width: min(var(--zoro-product-badge-width, 22rem), calc(100vw - 1.5rem));
-    box-shadow: 0 .25rem .75rem rgba(0, 0, 0, .10);
-    pointer-events: auto;
+  @keyframes zoro-pulse-{{ block.id }} {
+    0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--zoro-accent, {{ block.settings.warning_color }}) 42%, transparent); transform: scale(.9); }
+    75%, 100% { box-shadow: 0 0 0 .55rem transparent; transform: scale(1); }
   }
-  .zoro-adaptive-stock-badge-{{ block.id }}.zoro-adaptive-stock-badge--product-price-inline {
-    position: static !important;
-    z-index: auto;
-    display: flex !important;
-    clear: both;
-    width: 100%;
-    max-width: 100%;
-    margin: 1.25rem 0 3rem !important;
-    pointer-events: auto;
+  @media (max-width: 749px) {
+    #LowStockCounter-{{ block.id }} { font-size: var(--zoro-mobile-size); }
+    #LowStockCounter-{{ block.id }}.zoro-stock--hide-mobile { display: none !important; }
+    .zoro-adaptive-stock-badge-{{ block.id }} { font-size: {{ block.settings.mobile_font_size }}px; }
   }
-  .zoro-adaptive-stock-badge-{{ block.id }}.zoro-adaptive-stock-badge--product-price-inline + *,
-  .zoro-adaptive-stock-badge-{{ block.id }}.zoro-adaptive-stock-badge--product-price-inline + form,
-  .zoro-adaptive-stock-badge-{{ block.id }}.zoro-adaptive-stock-badge--product-price-inline + product-form {
-    margin-top: 1.75rem !important;
-  }
-  .zoro-adaptive-stock-badge-{{ block.id }}.zoro-adaptive-stock-badge--cart-line {
-    display: inline-flex !important;
-    width: auto;
-    max-width: 100%;
-    margin: .55rem 0 .25rem;
-    padding: .24rem .5rem;
-    border-radius: 999px;
-    font-size: .88em;
-    line-height: 1.2;
-    box-shadow: none;
-  }
-  cart-drawer,
-  cart-notification,
-  .cart-drawer,
-  .drawer,
-  .drawer__inner,
-  #CartDrawer,
-  [id*="CartDrawer"],
-  [class*="cart-drawer"],
-  [class*="drawer"] {
-    z-index: 2147483000 !important;
-  }
-  @keyframes zoro-adaptive-pulse-{{ block.id }} {
-    0% { box-shadow: 0 0 0 0 color-mix(in srgb, {{ block.settings.warning_color }} 44%, transparent); transform: scale(.9); }
-    80%, 100% { box-shadow: 0 0 0 .5rem transparent; transform: scale(1); }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .zoro-adaptive-stock-badge-{{ block.id }}::before { animation: none; }
+  @media (min-width: 750px) {
+    #LowStockCounter-{{ block.id }}.zoro-stock--hide-desktop { display: none !important; }
   }
 </style>
 
 <script>
   (() => {
     const root = document.getElementById('LowStockCounter-{{ block.id }}');
-    if (!root || root.dataset.ready === 'true') return;
-    root.dataset.ready = 'true';
+    if (!root) return;
 
-    const message = root.querySelector('[data-zoro-message]');
-    const progress = root.querySelector('[data-zoro-progress]');
-    const fill = root.querySelector('[data-zoro-fill]');
-    const source = root.querySelector('[data-zoro-variants]');
-    const inventory = root.querySelector('[data-zoro-inventory]');
-    const soldOutBadge = root.querySelector('[data-zoro-sold-out-badge]');
-    const pair = root.querySelector('[data-zoro-pair]');
-    const companionVariant = root.querySelector('[data-zoro-companion-variant]');
-    const addBothButton = root.querySelector('[data-zoro-add-both]');
-    const pairStatus = root.querySelector('[data-zoro-pair-status]');
-    const threshold = Math.max(1, Number(root.dataset.threshold) || 10);
-    const displayMode = root.dataset.displayMode || 'always';
-    const designMode = root.dataset.designMode === 'true';
-    const showProgress = root.dataset.showProgress === 'true';
-    const variants = JSON.parse(source?.textContent || '[]');
     const pageType = root.dataset.pageType;
-    let updateTimer;
-    let portal;
-    let lastPortalRender;
-    let portalWatch;
-
-    const text = (template, count) =>
-      (template || '').split('[count]').join(String(count));
-
-    const setRootVisibility = () => {
-      root.hidden = inventory.hidden && !pair;
-    };
-
-    const visibleBox = (node) => {
-      const box = node?.getBoundingClientRect?.();
-      if (!box || box.width < 1 || box.height < 1) return null;
-      const style = window.getComputedStyle(node);
-      if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) {
-        return null;
-      }
-      return box;
-    };
-
-    const purchaseCopy = (node) =>
-      (node?.textContent || node?.value || node?.getAttribute?.('aria-label') || '')
-        .replace(/\s+/g, ' ')
-        .trim()
-        .toLowerCase();
-
-    const purchaseButtons = () => [...document.querySelectorAll([
-        'button',
-        'input[type="submit"]',
-        'a',
-        '[role="button"]',
-        '[name="add"]',
-        '[class*="button"]',
-        '[class*="payment-button"]'
-      ].join(', '))]
-        .filter((button) => {
-          const copy = purchaseCopy(button);
-          return !root.contains(button) && visibleBox(button) && /add to cart|buy it now|sold out/.test(copy);
-        })
-        .sort((left, right) => {
-          const leftCopy = purchaseCopy(left);
-          const rightCopy = purchaseCopy(right);
-          const leftPriority = /add to cart|sold out/.test(leftCopy) ? 0 : 1;
-          const rightPriority = /add to cart|sold out/.test(rightCopy) ? 0 : 1;
-          const leftBox = left.getBoundingClientRect();
-          const rightBox = right.getBoundingClientRect();
-          return (leftPriority - rightPriority) || (rightBox.left - leftBox.left) || (leftBox.top - rightBox.top);
-        });
-
-    const purchaseColumnBox = () => {
-      const button = purchaseButtons()[0];
-      const buttonBox = visibleBox(button);
-      if (!buttonBox) return null;
-
-      const shell = purchaseShell(button);
-      const shellBox = visibleBox(shell);
-      if (shellBox && shellBox.width <= window.innerWidth * 0.62) return shellBox;
-
-      return buttonBox;
-    };
-
-    const productForm = () => {
-      const columnBox = purchaseColumnBox();
-      const forms = [...document.querySelectorAll('form[action*="/cart/add"]')]
-        .filter((form) => {
-          const box = visibleBox(form);
-          if (!box || root.contains(form)) return false;
-          if (!columnBox) return true;
-          const overlap = Math.min(box.right, columnBox.right) - Math.max(box.left, columnBox.left);
-          return box.width <= window.innerWidth * 0.62 && overlap > columnBox.width * 0.5;
-        })
-        .map((form) => {
-          const box = form.getBoundingClientRect();
-          const copy = purchaseCopy(form);
-          return {
-            form,
-            priority: /add to cart|buy it now|sold out/.test(copy) ? 0 : 1,
-            left: box.left,
-            top: box.top
-          };
-        })
-        .sort((left, right) =>
-          (left.priority - right.priority)
-          || (right.left - left.left)
-          || (left.top - right.top)
-        );
-
-      return forms[0]?.form || null;
-    };
-
-    const purchaseShell = (node) =>
-      node.closest?.([
-        'form[action*="/cart/add"]',
-        'product-form',
-        '.product-form',
-        '[class*="product-form"]',
-        '[class*="buy-buttons"]',
-        '[class*="payment-button"]',
-        '[class*="quantity"]'
-      ].join(', ')) || node;
-
-    const purchaseTarget = () => {
-      const purchaseButton = purchaseButtons()[0];
-      if (purchaseButton) {
-        const shell = purchaseShell(purchaseButton);
-        const shellBox = visibleBox(shell);
-        if (shellBox && shellBox.width <= window.innerWidth * 0.62) {
-          return {
-            node: shell,
-            mode: 'before'
-          };
-        }
-
-        return {
-          node: purchaseButton,
-          mode: 'before'
-        };
-      }
-
-      const form = productForm();
-      if (visibleBox(form)) return { node: form, mode: 'before' };
-
-      return null;
-    };
-
-    const visiblePriceTarget = () => {
-      const purchaseBox = purchaseColumnBox() || visibleBox(purchaseTarget()?.node);
-      if (!purchaseBox) return null;
-
-      const candidates = [...document.querySelectorAll([
-        '.price',
-        '[id*="price" i]',
-        '[class*="price" i]',
-        '[data-product-price]',
-        'span',
-        'div',
-        'p',
-        'dd'
-      ].join(', '))]
-        .filter((node) => {
-          if (node === root || root.contains(node) || node.contains(root)) return false;
-          const copy = (node.textContent || '').replace(/\s+/g, ' ').trim();
-          if (!/[$£€]|(?:^|\s)(?:USD|CAD|AUD|GBP|EUR)(?:\s|$)|\d+[.,]\d{2}/.test(copy)) return false;
-          if (copy.length > 80) return false;
-          const box = visibleBox(node);
-          if (!box || box.bottom > purchaseBox.top + 24) return false;
-          const overlap = Math.min(box.right, purchaseBox.right) - Math.max(box.left, purchaseBox.left);
-          const center = (box.left + box.right) / 2;
-          return overlap > Math.min(box.width, purchaseBox.width) * 0.25
-            || (center >= purchaseBox.left && center <= purchaseBox.right);
-        })
-        .sort((left, right) => {
-          const leftBox = left.getBoundingClientRect();
-          const rightBox = right.getBoundingClientRect();
-          return Math.abs(purchaseBox.top - leftBox.bottom) - Math.abs(purchaseBox.top - rightBox.bottom);
-        });
-
-      return candidates[0] ? { node: candidates[0], mode: 'after' } : null;
-    };
-
-    const exactCurrentPriceTarget = () => {
-      const money = (root.dataset.currentMoney || '').replace(/\s+/g, ' ').trim();
-      const price = (root.dataset.currentPrice || '').replace(/\s+/g, ' ').trim();
-      const needles = [money, price].filter(Boolean);
-      if (!needles.length) return null;
-      const purchaseBox = purchaseColumnBox() || visibleBox(purchaseTarget()?.node);
-      const nearPurchase = (node) => {
-        if (!purchaseBox) return true;
-        const box = visibleBox(node);
-        if (!box || box.bottom > purchaseBox.top + 48) return false;
-        const overlap = Math.min(box.right, purchaseBox.right) - Math.max(box.left, purchaseBox.left);
-        const center = (box.left + box.right) / 2;
-        return overlap > Math.min(box.width, purchaseBox.width) * 0.25
-          || (center >= purchaseBox.left && center <= purchaseBox.right);
-      };
-      const priceScore = (node) => {
-        const box = node.getBoundingClientRect();
-        const copy = (node.textContent || '').replace(/\s+/g, ' ').trim();
-        const exact = needles.some((needle) => copy === needle);
-        return {
-          exact: exact ? 0 : 1,
-          length: copy.length,
-          area: box.width * box.height,
-          left: box.left,
-          top: box.top
-        };
-      };
-
-      const candidates = [...document.querySelectorAll([
-        '.price',
-        '[id*="price" i]',
-        '[class*="price" i]',
-        '[data-product-price]',
-        'span',
-        'div',
-        'p',
-        'dd'
-      ].join(', '))]
-        .filter((node) => {
-          if (node === root || root.contains(node) || node.contains(root)) return false;
-          if (node.closest('button, label, option, select')) return false;
-          const box = visibleBox(node);
-          if (!box) return false;
-          const copy = (node.textContent || '').replace(/\s+/g, ' ').trim();
-          if (copy.length > 80) return false;
-          return nearPurchase(node) && needles.some((needle) => copy === needle || copy.includes(needle));
-        })
-        .sort((left, right) => {
-          const a = priceScore(left);
-          const b = priceScore(right);
-          return (a.exact - b.exact)
-            || (a.length - b.length)
-            || (a.area - b.area)
-            || (b.left - a.left)
-            || (a.top - b.top);
-        });
-
-      return candidates[0] ? { node: candidates[0], mode: 'after' } : null;
-    };
-
-    const priceBlockTarget = (target) => {
-      const node = target?.node;
-      if (!node) return null;
-      const anchor = node.closest?.([
-        '.price',
-        '[data-product-price]',
-        '[id*="price" i]',
-        '[class*="price" i]'
-      ].join(', ')) || node.parentElement || node;
-      return { node: anchor, mode: target.mode || 'after' };
-    };
-
-    const productInfoContainer = () => {
-      const form = productForm();
-      const purchase = purchaseTarget()?.node;
-      return form?.closest([
-        'product-info',
-        '.product__info-container',
-        '.product__info-wrapper',
-        '[class*="product__info"]',
-        '[class*="product-info"]'
-      ].join(', '))
-        || purchase?.closest([
-          'product-info',
-          '.product__info-container',
-          '.product__info-wrapper',
-          '[class*="product__info"]',
-          '[class*="product-info"]'
-        ].join(', '))
-        || form?.parentElement
-        || purchase?.parentElement
-        || null;
-    };
-
-    const productPriceTarget = () => {
-      const container = productInfoContainer();
-      const selectors = [
-        '.price',
-        '[id*="price" i]',
-        '[class*="price" i]',
-        '[data-product-price]',
-        'span',
-        'div',
-        'p',
-        'dd'
-      ];
-      const blockSelectors = [
-        '.price',
-        '[id*="price" i]',
-        '[class*="price" i]',
-        '[data-product-price]'
-      ];
-
-      if (container) {
-        const scopedCandidates = [...container.querySelectorAll(selectors.join(', '))]
-          .filter((node) => {
-            if (node === root || root.contains(node) || node.contains(root)) return false;
-            if (node.closest('[data-zoro-stock], [data-zoro-adaptive-stock]')) return false;
-            if (node.closest('button, label, option, select')) return false;
-            const copy = (node.textContent || '').replace(/\s+/g, ' ').trim();
-            if (!/[$£€]|(?:^|\s)(?:USD|CAD|AUD|GBP|EUR)(?:\s|$)|\d+[.,]\d{2}/.test(copy)) return false;
-            if (copy.length > 80) return false;
-            return visibleBox(node);
-          })
-          .sort((left, right) => {
-            const purchaseBox = visibleBox(purchaseTarget()?.node);
-            const leftBox = left.getBoundingClientRect();
-            const rightBox = right.getBoundingClientRect();
-            if (purchaseBox) {
-              return Math.abs(purchaseBox.top - leftBox.bottom) - Math.abs(purchaseBox.top - rightBox.bottom);
-            }
-            return (rightBox.left - leftBox.left) || (leftBox.top - rightBox.top);
-          });
-
-        const scopedPriceBlock = priceBlockTarget(scopedCandidates[0] ? { node: scopedCandidates[0], mode: 'after' } : null);
-        if (scopedPriceBlock) return scopedPriceBlock;
-
-      }
-
-      const price = exactCurrentPriceTarget() || visiblePriceTarget();
-      const priceBlock = priceBlockTarget(price);
-      if (priceBlock) return priceBlock;
-
-      for (const selector of blockSelectors) {
-        const node = container?.querySelector(selector);
-        if (node && !node.contains(root) && !root.contains(node)) {
-          return priceBlockTarget({ node, mode: 'after' });
-        }
-      }
-
-      return null;
-    };
-
-    const placeRootNearProductPrice = () => {
-      if (pageType !== 'product') return false;
-      const target = productPriceTarget();
-      if (!target?.node || target.node.contains(root)) return false;
-
-      if (target.mode === 'before') {
-        if (target.node.previousElementSibling !== root) {
-          target.node.insertAdjacentElement('beforebegin', root);
-        }
-      } else if (target.node.nextElementSibling !== root) {
-        target.node.insertAdjacentElement('afterend', root);
-      }
-
-      root.dataset.productPlacement = 'price';
-      return true;
-    };
-
-    const placeRootNearPurchaseControls = () => {
-      if (pageType !== 'product') return false;
-      const purchase = purchaseTarget();
-      const target = purchase?.node
-        ? { node: purchase.node, mode: 'before' }
-        : productPriceTarget();
-      if (!target?.node || target.node.contains(root) || root.contains(target.node)) return false;
-
-      if (target.mode === 'before') {
-        if (target.node.previousElementSibling !== root) {
-          target.node.insertAdjacentElement('beforebegin', root);
-        }
-      } else if (target.node.nextElementSibling !== root) {
-        target.node.insertAdjacentElement('afterend', root);
-      }
-
-      const followingNode = root.nextElementSibling;
-      forceProductInlineSpacing(root, followingNode, true);
-      root.dataset.productPlacement = 'price';
-      return true;
-    };
-
-    const portalTarget = () => pageType === 'product'
-      ? purchaseTarget() || exactCurrentPriceTarget() || visiblePriceTarget()
-      : exactCurrentPriceTarget() || visiblePriceTarget() || purchaseTarget();
-
-    const positionProductPortal = (node) => {
-      const target = portalTarget();
-      if (!node || !target?.node || target.node.contains(node)) return false;
-
-      const previousHidden = node.hidden;
-      node.hidden = false;
-      node.classList.add('zoro-stock--floating-purchase');
-      node.style.removeProperty('--zoro-floating-width');
-      node.style.removeProperty('left');
-      node.style.removeProperty('top');
-
-      const box = target.node.getBoundingClientRect();
-      const columnBox = purchaseColumnBox() || box;
-      const gap = 16;
-      const portalBox = node.getBoundingClientRect();
-      const width = Math.max(160, Math.min(columnBox.width, window.innerWidth - 24));
-      const left = Math.max(12, Math.min(columnBox.left + window.scrollX, window.scrollX + window.innerWidth - width - 12));
-      const top = target.mode === 'before'
-        ? Math.max(window.scrollY + 12, box.top + window.scrollY - portalBox.height - gap)
-        : box.bottom + window.scrollY + gap;
-      node.style.setProperty('--zoro-floating-width', `${width}px`);
-      node.style.left = `${left}px`;
-      node.style.top = `${top}px`;
-
-      node.hidden = previousHidden;
-      return true;
-    };
-
-    const ensureProductPortal = () => {
-      if (pageType !== 'product') return null;
-      const target = portalTarget();
-      if (!target?.node) return null;
-
-      if (!portal) {
-        portal = document.createElement('div');
-        portal.id = 'LowStockCounterPortal-{{ block.id }}';
-        portal.className = root.className;
-        portal.setAttribute('style', root.getAttribute('style') || '');
-        portal.setAttribute('role', 'status');
-        portal.setAttribute('aria-live', 'polite');
-        portal.setAttribute('aria-atomic', 'true');
-        portal.innerHTML = `
-          <div data-zoro-portal-inventory>
-            <div class="zoro-stock__alert">
-              {% if block.settings.show_pulse %}
-                <span class="zoro-stock__pulse" aria-hidden="true"></span>
-              {% endif %}
-              <span data-zoro-portal-message></span>
-              {% if block.settings.show_sold_out_badge %}
-                <span class="zoro-stock__badge" data-zoro-portal-sold-out-badge hidden>
-                  {{ block.settings.sold_out_badge_text }}
-                </span>
-              {% endif %}
-            </div>
-            <div class="zoro-stock__track" data-zoro-portal-progress hidden>
-              <span class="zoro-stock__fill" data-zoro-portal-fill></span>
-            </div>
-          </div>
-        `;
-        document.body.appendChild(portal);
-      }
-
-      return portal;
-    };
-
-    const forceProductInlineSpacing = (node, followingNode = null, reserveFormGap = true) => {
-      if (!node) return;
-      node.style.setProperty('display', 'block', 'important');
-      node.style.setProperty('width', '100%', 'important');
-      node.style.setProperty('clear', 'both', 'important');
-      node.style.setProperty('margin-top', '.9rem', 'important');
-      node.style.setProperty('margin-bottom', reserveFormGap ? '1.25rem' : '.9rem', 'important');
-      node.style.setProperty('position', 'static', 'important');
-      node.style.setProperty('z-index', 'auto', 'important');
-
-      if (!reserveFormGap) {
-        document.getElementById('LowStockCounterSpacer-{{ block.id }}')?.remove();
-        return;
-      }
-
-      document.getElementById('LowStockCounterSpacer-{{ block.id }}')?.remove();
-
-      if (followingNode && followingNode !== root && !root.contains(followingNode)) {
-        followingNode.style.setProperty('margin-top', '1.75rem', 'important');
-        followingNode.style.setProperty('padding-top', '0', 'important');
-      }
-
-      productPurchaseButtons().forEach((button) => {
-        button.style.setProperty('margin-top', '1.5rem', 'important');
-      });
-    };
-
-    const renderProductPortal = (copy, count = 0, progressVisible = false, soldOut = false) => {
-      lastPortalRender = { copy, count, progressVisible, soldOut };
-      const node = ensureProductPortal();
-      if (!node) return false;
-
-      node.querySelector('[data-zoro-portal-message]').textContent = copy;
-      const portalBadge = node.querySelector('[data-zoro-portal-sold-out-badge]');
-      const portalProgress = node.querySelector('[data-zoro-portal-progress]');
-      const portalFill = node.querySelector('[data-zoro-portal-fill]');
-      if (portalBadge) portalBadge.hidden = !soldOut;
-      portalProgress.hidden = !showProgress || !progressVisible;
-      portalFill.style.width = `${Math.min(100, Math.max(0, count / threshold * 100))}%`;
-
-      const purchaseColumnTarget = purchaseTarget();
-      const inlineTarget = purchaseColumnTarget?.node && !root.contains(purchaseColumnTarget.node)
-        ? purchaseColumnTarget
-        : productPriceTarget();
-      let resolvedInlineTarget = inlineTarget;
-      const inlineForm = resolvedInlineTarget?.node?.closest?.([
-        'form[action*="/cart/add"]',
-        'product-form',
-        '.product-form',
-        '[class*="product-form"]'
-      ].join(', '));
-      if (inlineForm && inlineForm !== resolvedInlineTarget.node && !root.contains(inlineForm)) {
-        resolvedInlineTarget = { node: inlineForm, mode: 'before' };
-      }
-      if (resolvedInlineTarget?.node && !resolvedInlineTarget.node.contains(node)) {
-        node.classList.remove('zoro-stock--floating-purchase');
-        node.classList.add('zoro-stock--inline-price');
-        node.style.removeProperty('--zoro-floating-width');
-        node.style.removeProperty('left');
-        node.style.removeProperty('top');
-        // Product pages prefer the purchase form so the badge stays in the price column.
-        if (resolvedInlineTarget.mode === 'before') {
-          if (resolvedInlineTarget.node.previousElementSibling !== node) {
-            resolvedInlineTarget.node.insertAdjacentElement('beforebegin', node);
-          }
-        } else if (resolvedInlineTarget.node.nextElementSibling !== node) {
-          resolvedInlineTarget.node.insertAdjacentElement('afterend', node);
-        }
-        forceProductInlineSpacing(node, resolvedInlineTarget.mode === 'before' ? resolvedInlineTarget.node : null);
-        node.hidden = false;
-        root.dataset.productPlacement = 'price';
-        return true;
-      }
-
-      node.classList.remove('zoro-stock--inline-price');
-      document.getElementById('LowStockCounterSpacer-{{ block.id }}')?.remove();
-      if (!document.body.contains(node)) document.body.appendChild(node);
-      if (!positionProductPortal(node)) {
-        node.hidden = true;
-        return false;
-      }
-      root.dataset.productPlacement = 'portal';
-      node.hidden = false;
-      return true;
-    };
-
-    const retryProductPlacement = () => {
-      if (pageType !== 'product') return;
-      [40, 160, 420, 900, 1800, 3200, 5200, 8000].forEach((delay) => {
-        window.setTimeout(() => {
-          if (lastPortalRender) {
-            renderProductPortal(
-              lastPortalRender.copy,
-              lastPortalRender.count,
-              lastPortalRender.progressVisible,
-              lastPortalRender.soldOut
-            );
-          }
-        }, delay);
-      });
-    };
-
-    const show = (copy, count = 0, progressVisible = false, soldOut = false) => {
-      message.textContent = copy;
-      if (soldOutBadge) soldOutBadge.hidden = !soldOut;
-      progress.hidden = !showProgress || !progressVisible;
-      progress.setAttribute('aria-valuenow', String(count));
-      fill.style.width = `${Math.min(100, Math.max(0, count / threshold * 100))}%`;
-
-      if (pageType === 'product') {
-        root.dataset.cardMode = 'true';
-        inventory.hidden = false;
-        root.hidden = false;
-        if (portal) portal.hidden = true;
-        if (!placeRootNearPurchaseControls()) {
-          inventory.hidden = true;
-          root.hidden = true;
-          renderProductPortal(copy, count, progressVisible, soldOut);
-          retryProductPlacement();
-        }
-        return;
-      }
-
-      inventory.hidden = false;
-      root.hidden = false;
-    };
-
-    const hide = () => {
-      inventory.hidden = true;
-      if (soldOutBadge) soldOutBadge.hidden = true;
-      if (portal) portal.hidden = true;
-      if (portalWatch) {
-        window.clearInterval(portalWatch);
-        portalWatch = null;
-      }
-      setRootVisibility();
-    };
-
-    window.addEventListener('resize', () => {
-      if (lastPortalRender && portal && !portal.hidden) renderProductPortal(
-        lastPortalRender.copy,
-        lastPortalRender.count,
-        lastPortalRender.progressVisible,
-        lastPortalRender.soldOut
-      );
-    }, { passive: true });
-    window.addEventListener('scroll', () => {
-      if (lastPortalRender && portal && !portal.hidden) positionProductPortal(portal);
-    }, { passive: true });
-
-    const selectedVariantId = (event) => {
-      const detail = event?.detail?.variant || event?.detail;
-      if (detail?.id) return String(detail.id);
-
-      const section = root.closest('.shopify-section') || root.closest('section') || document;
-      const form = section.querySelector('form[action*="/cart/add"]')
-        || document.querySelector('form[action*="/cart/add"]');
-      const input = form?.querySelector('[name="id"]');
-      return String(
-        input?.value
-        || new URLSearchParams(location.search).get('variant')
-        || root.dataset.variantId
-      );
-    };
-
-    const update = (event) => {
-      if (pageType !== 'product') {
-        hide();
-        return;
-      }
-
-      if (!variants.length) {
-        if (designMode && pageType === 'product') show(root.dataset.editorMessage || 'Place this block on a product template.');
-        else hide();
-        return;
-      }
-
-      const id = selectedVariantId(event);
-      const variant = variants.find((item) => String(item.id) === id) || variants[0];
-      if (!variant) return hide();
-
-      if (!variant.available) {
-        if (root.dataset.showSoldOut === 'true' || soldOutBadge) {
-          show(
-            root.dataset.showSoldOut === 'true' ? root.dataset.soldOutMessage : '',
-            0,
-            false,
-            true
-          );
-        }
-        else hide();
-        return;
-      }
-
-      const quantity = Number(variant.quantity);
-      const tracked = Boolean(variant.management)
-        && variant.policy !== 'continue'
-        && Number.isFinite(quantity);
-
-      if (!tracked) {
-        if (root.dataset.showUntracked === 'true') show(root.dataset.untrackedMessage);
-        else hide();
-        return;
-      }
-
-      if (displayMode === 'low_only' && quantity > threshold) return hide();
-      const copy = root.dataset.countDisplay === 'exact'
-        ? text(root.dataset.lowMessage, quantity)
-        : root.dataset.generalMessage;
-      show(copy, quantity, true);
-    };
-
-    const scheduleUpdate = (event) => {
-      window.clearTimeout(updateTimer);
-      updateTimer = window.setTimeout(() => update(event), 40);
-    };
-
-    ['variant:change', 'product:variant-change', 'variantChanged', 'shopify:variant:change']
-      .forEach((name) => document.addEventListener(name, scheduleUpdate));
-
-    document.addEventListener('change', (event) => {
-      if (event.target.closest(
-        'variant-selects, variant-radios, [data-variant-selector], form[action*="/cart/add"]'
-      )) scheduleUpdate(event);
-    });
-    window.addEventListener('popstate', scheduleUpdate);
-    document.addEventListener('shopify:section:load', scheduleUpdate);
-    document.addEventListener('shopify:block:select', (event) => {
-      if (event.target.contains(root) || event.target === root) update(event);
-    });
-    document.addEventListener('shopify:section:unload', (event) => {
-      if (event.target.contains(root)) window.clearTimeout(updateTimer);
-    });
-
-    if (addBothButton && companionVariant) {
-      addBothButton.addEventListener('click', async () => {
-        const currentId = Number(selectedVariantId());
-        const companionId = Number(companionVariant.value);
-        if (!currentId || !companionId) return;
-
-        addBothButton.disabled = true;
-        addBothButton.textContent = root.dataset.addingText;
-        pairStatus.textContent = '';
-
-        try {
-          const base = window.Shopify?.routes?.root || '/';
-          const response = await fetch(`${base}cart/add.js`, {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: {
-              'Accept': 'application/json',
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              items: [
-                { id: currentId, quantity: 1 },
-                { id: companionId, quantity: 1 }
-              ]
-            })
-          });
-          if (!response.ok) throw new Error('Cart request failed');
-
-          addBothButton.textContent = root.dataset.addedText;
-          pairStatus.textContent = root.dataset.addedText;
-          document.dispatchEvent(new CustomEvent('cart:refresh'));
-          document.dispatchEvent(new CustomEvent('cart:updated'));
-          if (root.dataset.afterAdd === 'cart') {
-            window.location.assign(`${base}cart`);
-            return;
-          }
-        } catch (error) {
-          pairStatus.textContent = root.dataset.addErrorText;
-        }
-
-        addBothButton.disabled = false;
-        addBothButton.textContent = root.dataset.addBothText;
-      });
-    }
-
-    update();
-    setRootVisibility();
-  })();
-</script>
-
-<script>
-  (() => {
-    const root = document.getElementById('LowStockCounter-{{ block.id }}');
-    if (!root || root.dataset.adaptiveReady === 'true') return;
-    root.dataset.adaptiveReady = 'true';
-
-    const collectionSource = document.querySelector('[data-zoro-collection-products="{{ block.id }}"]');
-    const cartSource = document.querySelector('[data-zoro-cart-items="{{ block.id }}"]');
     const threshold = Math.max(1, Number(root.dataset.threshold) || 10);
-    const showSoldOut = root.dataset.showSoldOut === 'true';
     const displayMode = root.dataset.displayMode || 'always';
     const relatedDisplay = root.dataset.relatedDisplay || 'simple';
-    const countDisplay = root.dataset.countDisplay || 'exact';
-    const badgeClass = 'zoro-adaptive-stock-badge-{{ block.id }}';
-    const adaptiveList = root.querySelector('[data-zoro-adaptive-list]');
-    const inventory = root.querySelector('[data-zoro-inventory]');
-    const pair = root.querySelector('[data-zoro-pair]');
-    const variantSource = root.querySelector('[data-zoro-variants]');
-    const productVariants = JSON.parse(variantSource?.textContent || '[]');
+    const messageNode = root.querySelector('[data-zoro-message]');
+    const progress = root.querySelector('[data-zoro-progress]');
+    const fill = root.querySelector('[data-zoro-fill]');
+    const soldOutBadge = root.querySelector('[data-zoro-sold-out-badge]');
+    const variants = JSON.parse(root.querySelector('[data-zoro-variants]')?.textContent || '[]');
+    const collectionSource = document.querySelector('[data-zoro-collection-products="{{ block.id }}"]');
     const productCache = new Map();
     const simulatedCounts = new Map();
-    let productPriceBadge;
 
-    const copy = (template, count) => (template || '').split('[count]').join(String(count));
-    const cssEscape = (value) => (
-      window.CSS?.escape
-        ? window.CSS.escape(String(value))
-        : String(value).replace(/["\\]/g, '\\$&')
-    );
+    const cssEscape = (value) => window.CSS?.escape ? window.CSS.escape(value) : String(value).replace(/["\\]/g, '\\$&');
+    const normalize = (text) => String(text || '').replace(/\s+/g, ' ').trim();
+    const moneyParts = () => [
+      normalize(root.dataset.currentMoney),
+      normalize(root.dataset.currentPrice)
+    ].filter(Boolean);
 
-    const badgeFor = (item) => {
+    const badgeFor = (item, useRelatedRules = false) => {
+      const available = item.available !== false && item.variantAvailable !== false;
       const quantity = Number(item.quantity);
-      if ((!item.available || item.variantAvailable === false) && showSoldOut) {
-        return { copy: root.dataset.soldOutMessage || 'Sold out', state: 'sold-out' };
-      }
-      if (item.tracked && Number.isFinite(quantity)) {
-        if (displayMode === 'low_only' && quantity > threshold) return null;
-        const message = countDisplay === 'exact'
-          ? copy(root.dataset.lowMessage, quantity)
-          : root.dataset.generalMessage;
-        return { copy: message, state: 'low' };
-      }
-      if (root.dataset.showUntracked === 'true') {
-        return { copy: root.dataset.untrackedMessage, state: 'low' };
-      }
-      return null;
-    };
+      const tracked = item.tracked === true || (item.management && item.policy !== 'continue' && Number.isFinite(quantity));
 
-    const relatedBadgeFor = (item) => {
-      if (relatedDisplay === 'off') return null;
-      if (relatedDisplay === 'exact') return badgeFor(item);
-
-      const quantity = Number(item.quantity);
-      if ((!item.available || item.variantAvailable === false) && showSoldOut) {
-        return { copy: root.dataset.soldOutMessage || 'Sold out', state: 'sold-out' };
-      }
-      if (item.tracked && Number.isFinite(quantity)) {
-        if (quantity > threshold) return null;
-        return { copy: root.dataset.generalMessage, state: 'low' };
-      }
-      if (root.dataset.showUntracked === 'true') {
-        return { copy: root.dataset.untrackedMessage, state: 'low' };
-      }
-      return null;
-    };
-
-    const makeBadge = (key, badge, placement = '') => {
-      const node = document.createElement('span');
-      node.className = placement ? `${badgeClass} ${badgeClass}--${placement}` : badgeClass;
-      node.dataset.zoroAdaptiveStock = key;
-      node.dataset.state = badge.state;
-      if (placement) node.dataset.placement = placement;
-      node.textContent = badge.copy;
-      return node;
-    };
-
-    const hideProductInline = () => {
-      if (root.dataset.pageType !== 'product' || !inventory) return;
-      root.dataset.cardMode = 'true';
-      inventory.hidden = true;
-      if (!pair) root.hidden = true;
-    };
-
-    const removeProductPriceBadge = () => {
-      document.getElementById('LowStockAdaptiveSpacer-{{ block.id }}')?.remove();
-      productPriceBadge?.remove();
-      productPriceBadge = null;
-    };
-
-    const removeCurrentProductOverlay = () => {
-      document
-        .querySelectorAll(`[data-zoro-adaptive-stock*="{{ block.id }}-current-"]`)
-        .forEach((node) => node.remove());
-    };
-
-    const clearInline = () => {
-      if (!adaptiveList) return;
-      adaptiveList.replaceChildren();
-      adaptiveList.hidden = true;
-    };
-
-    const renderInline = (entries) => {
-      if (!adaptiveList || !entries.length) {
-        clearInline();
-        return;
+      if (!available) {
+        if (root.dataset.showSoldOut !== 'true') return null;
+        return { state: 'sold-out', count: 0, copy: root.dataset.soldOutMessage };
       }
 
-      adaptiveList.replaceChildren(...entries.slice(0, 8).map((entry) => {
-        const item = document.createElement('div');
-        item.className = 'zoro-stock__adaptive-item';
-
-        const title = document.createElement('span');
-        title.className = 'zoro-stock__adaptive-title';
-        title.textContent = entry.title || '';
-
-        item.append(title, makeBadge(entry.key, entry.badge));
-        return item;
-      }));
-
-      adaptiveList.hidden = false;
-      root.hidden = false;
-    };
-
-    const closestProductCard = (node, title) => {
-      const productTitle = (title || '').trim();
-      let current = node;
-
-      while (current && current !== document.body) {
-        const isCandidate = current.matches?.([
-          '.card-wrapper',
-          '.grid__item',
-          '[class*="product-card"]',
-          '[class*="card-wrapper"]',
-          '[class*="product-grid"] li',
-          'li',
-          'article',
-          'product-card'
-        ].join(', '));
-        const hasContent = !productTitle
-          || (current.textContent || '').includes(productTitle)
-          || current.querySelector?.('.price, [class*="price"], .card__heading, h2, h3');
-
-        if (isCandidate && hasContent && !current.contains(root)) return current;
-        current = current.parentElement;
-      }
-
-      return null;
-    };
-
-    const productCardFor = (product) => {
-      const handle = product.handle || '';
-      const title = (product.title || '').trim();
-      const anchors = [...document.querySelectorAll(`a[href*="/products/${cssEscape(handle)}"]`)];
-      for (const anchor of anchors) {
-        const pathname = new URL(anchor.href, location.origin).pathname;
-        if (!pathname.includes(`/products/${handle}`)) continue;
-        const card = closestProductCard(anchor, title);
-        if (card) return card;
-      }
-
-      if (title) {
-        const titleNodes = [...document.querySelectorAll([
-          '.card__heading',
-          '.card-information',
-          '.full-unstyled-link',
-          '[class*="title"]',
-          '[class*="heading"]',
-          'h2',
-          'h3',
-          'a'
-        ].join(', '))];
-        for (const node of titleNodes) {
-          if ((node.textContent || '').trim().includes(title)) {
-            const card = closestProductCard(node, title);
-            if (card) return card;
-          }
+      if (!tracked) {
+        if (root.dataset.showUntracked !== 'true') return null;
+        if (useRelatedRules && relatedDisplay === 'exact') {
+          const count = simulatedCountFor(item.handle || item.title || 'product');
+          return { state: 'low', count, copy: root.dataset.lowMessage.replace('[count]', count) };
         }
+        return { state: 'untracked', count: threshold, copy: root.dataset.untrackedMessage };
       }
 
-      return null;
-    };
+      if (!Number.isFinite(quantity)) return null;
+      if (displayMode === 'low_only' && quantity > threshold) return null;
+      if (useRelatedRules && relatedDisplay === 'simple' && quantity > threshold) return null;
 
-    const selectedVariantId = () => {
-      const section = root.closest('.shopify-section') || root.closest('section') || document;
-      const form = section.querySelector('form[action*="/cart/add"]')
-        || document.querySelector('form[action*="/cart/add"]');
-      return String(
-        form?.querySelector('[name="id"]')?.value
-        || new URLSearchParams(location.search).get('variant')
-        || root.dataset.variantId
-      );
-    };
+      if (root.dataset.countDisplay === 'general') {
+        return { state: 'low', count: quantity, copy: root.dataset.generalMessage };
+      }
 
-    const currentProductItem = () => {
-      if (root.dataset.pageType !== 'product' || !productVariants.length) return null;
-      const variant = productVariants.find((item) => String(item.id) === selectedVariantId())
-        || productVariants[0];
-      if (!variant) return null;
-
-      const quantity = Number(variant.quantity);
       return {
-        handle: root.dataset.currentHandle,
-        title: '',
-        available: variant.available,
-        variantAvailable: variant.available,
-        quantity,
-        tracked: Boolean(variant.management)
-          && variant.policy !== 'continue'
-          && Number.isFinite(quantity)
+        state: quantity <= threshold ? 'low' : 'stock',
+        count: quantity,
+        copy: root.dataset.lowMessage.replace('[count]', quantity)
       };
     };
 
-    const visibleBox = (node) => {
-      const box = node?.getBoundingClientRect?.();
-      if (!box || box.width < 1 || box.height < 1) return null;
-      const style = window.getComputedStyle(node);
-      if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) {
-        return null;
+    const selectedVariant = () => {
+      const form = document.querySelector('form[action*="/cart/add"]');
+      const value = form?.querySelector('[name="id"]')?.value
+        || document.querySelector('[name="id"]')?.value
+        || root.dataset.variantId;
+      return variants.find((variant) => String(variant.id) === String(value)) || variants[0] || {};
+    };
+
+    const renderRoot = () => {
+      const badge = badgeFor(selectedVariant());
+      if (!badge) {
+        root.hidden = true;
+        return;
       }
-      return box;
-    };
 
-    const purchaseCopy = (node) =>
-      (node?.textContent || node?.value || node?.getAttribute?.('aria-label') || '')
-        .replace(/\s+/g, ' ')
-        .trim()
-        .toLowerCase();
-
-    const purchaseShell = (node) =>
-      node.closest?.([
-        'form[action*="/cart/add"]',
-        'product-form',
-        '.product-form',
-        '[class*="product-form"]',
-        '[class*="buy-buttons"]',
-        '[class*="payment-button"]',
-        '[class*="quantity"]'
-      ].join(', ')) || node;
-
-    const productPurchaseButtons = () => [...document.querySelectorAll([
-        'button',
-        'input[type="submit"]',
-        'a',
-        '[role="button"]',
-        '[name="add"]',
-        '[class*="button"]',
-        '[class*="payment-button"]'
-      ].join(', '))]
-        .filter((button) => {
-          const copy = purchaseCopy(button);
-          return !root.contains(button) && visibleBox(button) && /add to cart|buy it now|sold out/.test(copy);
-        })
-        .sort((left, right) => {
-          const leftCopy = purchaseCopy(left);
-          const rightCopy = purchaseCopy(right);
-          const leftPriority = /add to cart|sold out/.test(leftCopy) ? 0 : 1;
-          const rightPriority = /add to cart|sold out/.test(rightCopy) ? 0 : 1;
-          const leftBox = left.getBoundingClientRect();
-          const rightBox = right.getBoundingClientRect();
-          return (leftPriority - rightPriority) || (rightBox.left - leftBox.left) || (leftBox.top - rightBox.top);
-        });
-
-    const productPurchaseColumnBox = () => {
-      const button = productPurchaseButtons()[0];
-      const buttonBox = visibleBox(button);
-      if (!buttonBox) return null;
-
-      const shell = purchaseShell(button);
-      const shellBox = visibleBox(shell);
-      if (shellBox && shellBox.width <= window.innerWidth * 0.62) return shellBox;
-
-      return buttonBox;
-    };
-
-    const productFormTarget = () => {
-      const columnBox = productPurchaseColumnBox();
-      const forms = [...document.querySelectorAll('form[action*="/cart/add"]')]
-        .filter((form) => {
-          const box = visibleBox(form);
-          if (!box || root.contains(form)) return false;
-          if (!columnBox) return true;
-          const overlap = Math.min(box.right, columnBox.right) - Math.max(box.left, columnBox.left);
-          return box.width <= window.innerWidth * 0.62 && overlap > columnBox.width * 0.5;
-        })
-        .map((form) => {
-          const box = form.getBoundingClientRect();
-          const copy = purchaseCopy(form);
-          return {
-            form,
-            priority: /add to cart|buy it now|sold out/.test(copy) ? 0 : 1,
-            left: box.left,
-            top: box.top
-          };
-        })
-        .sort((left, right) =>
-          (left.priority - right.priority)
-          || (right.left - left.left)
-          || (left.top - right.top)
-        );
-
-      return forms[0]?.form || null;
+      messageNode.textContent = badge.copy;
+      root.dataset.state = badge.state;
+      root.hidden = false;
+      if (soldOutBadge) soldOutBadge.hidden = badge.state !== 'sold-out';
+      if (progress) progress.hidden = root.dataset.showProgress !== 'true' || badge.state === 'sold-out';
+      if (fill) fill.style.width = `${Math.max(0, Math.min(100, (badge.count / threshold) * 100))}%`;
+      progress?.setAttribute('aria-valuenow', String(Math.max(0, Math.min(threshold, badge.count))));
     };
 
     const productInfoContainer = () => {
-      const form = productFormTarget();
-      const purchase = productPurchaseTarget()?.node;
-      return form?.closest([
-        'product-info',
-        '.product__info-container',
-        '.product__info-wrapper',
-        '[class*="product__info"]',
-        '[class*="product-info"]'
-      ].join(', '))
-        || purchase?.closest([
-          'product-info',
-          '.product__info-container',
-          '.product__info-wrapper',
-          '[class*="product__info"]',
-          '[class*="product-info"]'
-        ].join(', '))
-        || null;
+      const form = document.querySelector('form[action*="/cart/add"]');
+      return form?.closest('section, product-info, .product__info-container, .product__info-wrapper, .product-form, [class*="product__info"], [class*="product-info"]')
+        || form?.parentElement
+        || document.querySelector('main');
     };
 
-    const productPurchaseTarget = () => {
-      const purchaseButton = productPurchaseButtons()[0];
-      if (purchaseButton) {
-        const shell = purchaseShell(purchaseButton);
-        const shellBox = visibleBox(shell);
-        if (shellBox && shellBox.width <= window.innerWidth * 0.62) {
-          return {
-            node: shell,
-            mode: 'before'
-          };
-        }
-
-        return {
-          node: purchaseButton,
-          mode: 'before'
-        };
-      }
-
-      const form = productFormTarget();
-      if (visibleBox(form)) return { node: form, mode: 'before' };
-
-      return null;
-    };
-
-    const productVisiblePriceTarget = () => {
-      const purchaseBox = productPurchaseColumnBox() || visibleBox(productPurchaseTarget()?.node);
-      if (!purchaseBox) return null;
-
-      const candidates = [...document.querySelectorAll([
-        '.price',
-        '[id*="price" i]',
-        '[class*="price" i]',
-        '[data-product-price]',
-        'span',
-        'div',
-        'p',
-        'dd'
-      ].join(', '))]
-        .filter((node) => {
-          if (node === root || root.contains(node) || node.contains(root)) return false;
-          const copy = (node.textContent || '').replace(/\s+/g, ' ').trim();
-          if (!/[$£€]|(?:^|\s)(?:USD|CAD|AUD|GBP|EUR)(?:\s|$)|\d+[.,]\d{2}/.test(copy)) return false;
-          if (copy.length > 80) return false;
-          const box = visibleBox(node);
-          if (!box || box.bottom > purchaseBox.top + 24) return false;
-          const overlap = Math.min(box.right, purchaseBox.right) - Math.max(box.left, purchaseBox.left);
-          const center = (box.left + box.right) / 2;
-          return overlap > Math.min(box.width, purchaseBox.width) * 0.25
-            || (center >= purchaseBox.left && center <= purchaseBox.right);
-        })
-        .sort((left, right) => {
-          const leftBox = left.getBoundingClientRect();
-          const rightBox = right.getBoundingClientRect();
-          return Math.abs(purchaseBox.top - leftBox.bottom) - Math.abs(purchaseBox.top - rightBox.bottom);
-        });
-
-      return candidates[0] || null;
-    };
-
-    const productPriceBlockTarget = (node) => {
-      if (!node) return null;
-      return node.closest?.([
-        '.price',
-        '[data-product-price]',
-        '[id*="price" i]',
-        '[class*="price" i]'
-      ].join(', ')) || node.parentElement || node;
-    };
-
-    const productPagePriceTarget = () => {
-      const visiblePrice = productVisiblePriceTarget();
-      const visiblePriceBlock = productPriceBlockTarget(visiblePrice);
-      if (visiblePriceBlock) return visiblePriceBlock;
-
+    const priceTarget = () => {
       const container = productInfoContainer();
+      if (!container) return null;
       const selectors = [
         '.price',
-        '[id*="price" i]',
-        '[class*="price" i]',
-        '[data-product-price]'
+        '[class*="price"]',
+        '[id*="price"]',
+        '[data-product-price]',
+        '[data-price]'
       ];
+      const prices = [...container.querySelectorAll(selectors.join(', '))]
+        .filter((node) => !node.contains(root) && moneyParts().some((part) => normalize(node.textContent).includes(part)));
+      if (prices[0]) return prices[0];
 
-      for (const selector of selectors) {
-        const node = container?.querySelector(selector);
-        const block = productPriceBlockTarget(node);
-        if (block && !block.contains(root)) return block;
+      const walker = document.createTreeWalker(container, NodeFilter.SHOW_ELEMENT);
+      let node;
+      while ((node = walker.nextNode())) {
+        if (node.contains(root)) continue;
+        if (moneyParts().some((part) => normalize(node.textContent).includes(part))) return node;
       }
-
-      return productPurchaseTarget()?.node || null;
-    };
-
-    const placeProductRootNearPrice = () => {
-      if (root.dataset.pageType !== 'product') return false;
-      const target = productPagePriceTarget();
-      if (!target || target.contains(root)) return false;
-
-      const purchase = productPurchaseTarget();
-      if (purchase?.node === target || purchase?.node?.contains(target)) {
-        if (purchase.node.previousElementSibling !== root) {
-          purchase.node.insertAdjacentElement('beforebegin', root);
-        }
-        root.dataset.productPlacement = 'price';
-        return isVisible(root) || !root.hidden;
-      }
-
-      const form = target.matches?.('form[action*="/cart/add"]')
-        ? target
-        : target.closest?.('form[action*="/cart/add"]');
-      const anchor = target.closest([
-        '.price',
-        '[id*="price" i]',
-        '[class*="price" i]',
-        '[data-product-price]'
-      ].join(', ')) || target;
-
-      if (form && !form.contains(root)) {
-        form.insertAdjacentElement('beforebegin', root);
-      } else if (anchor.nextElementSibling !== root) {
-        anchor.insertAdjacentElement('afterend', root);
-      }
-
-      root.dataset.productPlacement = 'price';
-      return isVisible(root) || !root.hidden;
-    };
-
-    const productPriceAnchor = () => {
-      const price = productPagePriceTarget();
-      if (price) {
-        const form = price.closest?.([
-          'form[action*="/cart/add"]',
-          'product-form',
-          '.product-form',
-          '[class*="product-form"]'
-        ].join(', '));
-        if (form && form !== price && !root.contains(form)) {
-          return { node: form, mode: 'before' };
-        }
-        return { node: price, mode: 'after' };
-      }
-
-      const purchase = productPurchaseTarget();
-      if (purchase?.node) return { node: purchase.node, mode: 'before' };
-
       return null;
     };
 
-    const positionProductPriceBadge = () => {
-      if (!productPriceBadge) return false;
-      const anchor = productPriceAnchor();
-      if (!anchor?.node) return false;
-
-      const anchorBox = visibleBox(anchor.node);
-      const columnBox = productPurchaseColumnBox() || anchorBox;
-      if (!anchorBox || !columnBox) return false;
-
-      productPriceBadge.hidden = false;
-      const badgeBox = productPriceBadge.getBoundingClientRect();
-      const gap = 8;
-      const width = Math.max(160, Math.min(columnBox.width, window.innerWidth - 24));
-      const left = Math.max(12, Math.min(columnBox.left + window.scrollX, window.scrollX + window.innerWidth - width - 12));
-      const top = anchor.mode === 'before'
-        ? Math.max(window.scrollY + 12, anchorBox.top + window.scrollY - badgeBox.height - gap)
-        : anchorBox.bottom + window.scrollY + gap;
-
-      productPriceBadge.style.setProperty('--zoro-product-badge-width', `${width}px`);
-      productPriceBadge.style.left = `${left}px`;
-      productPriceBadge.style.top = `${top}px`;
-      return true;
+    const purchaseTarget = () => {
+      const container = productInfoContainer();
+      if (!container) return null;
+      return [...container.querySelectorAll('button, [type="submit"]')]
+        .find((button) => /add to cart|buy it now|sold out/i.test(normalize(button.textContent)));
     };
 
-    const reserveProductPurchaseSpace = (badgeNode, anchorNode = null) => {
-      if (!badgeNode) return;
-
-      document.getElementById('LowStockAdaptiveSpacer-{{ block.id }}')?.remove();
-      badgeNode.style.setProperty('position', 'static', 'important');
-      badgeNode.style.setProperty('z-index', 'auto', 'important');
-      badgeNode.style.setProperty('margin-top', '.9rem', 'important');
-      badgeNode.style.setProperty('margin-bottom', '1.25rem', 'important');
-      badgeNode.style.removeProperty('left');
-      badgeNode.style.removeProperty('top');
-      badgeNode.style.removeProperty('--zoro-product-badge-width');
-
-      if (anchorNode && anchorNode !== badgeNode && !badgeNode.contains(anchorNode)) {
-        anchorNode.style.setProperty('margin-top', '1.75rem', 'important');
-        anchorNode.style.setProperty('padding-top', '0', 'important');
+    const placeRootNearPrice = () => {
+      if (pageType !== 'product') return;
+      const price = priceTarget();
+      const purchase = purchaseTarget();
+      const anchor = price || purchase;
+      if (!anchor) {
+        root.hidden = true;
+        return;
       }
 
-      productPurchaseButtons().forEach((button) => {
-        button.style.setProperty('margin-top', '1.5rem', 'important');
-      });
-    };
-
-    const renderProductPriceBadge = (badge) => {
-      const anchor = productPriceAnchor();
-      if (!anchor?.node) {
-        removeProductPriceBadge();
-        return false;
-      }
-
-      if (!productPriceBadge) {
-        productPriceBadge = makeBadge('{{ block.id }}-product-price', badge, 'product-price');
-        document.body.appendChild(productPriceBadge);
+      root.dataset.zoroInline = 'price';
+      if (price) {
+        price.insertAdjacentElement('afterend', root);
       } else {
-        productPriceBadge.dataset.state = badge.state;
-        productPriceBadge.textContent = badge.copy;
+        purchase.insertAdjacentElement('beforebegin', root);
       }
-
-      if (!anchor.node.contains(productPriceBadge)) {
-        productPriceBadge.classList.add('zoro-adaptive-stock-badge--product-price-inline');
-        productPriceBadge.style.removeProperty('--zoro-product-badge-width');
-        productPriceBadge.style.removeProperty('left');
-        productPriceBadge.style.removeProperty('top');
-        if (anchor.mode === 'before') {
-          anchor.node.insertAdjacentElement('beforebegin', productPriceBadge);
-        } else {
-          anchor.node.insertAdjacentElement('afterend', productPriceBadge);
-        }
-        reserveProductPurchaseSpace(productPriceBadge, anchor.mode === 'before' ? anchor.node : null);
-        productPriceBadge.hidden = false;
-        if (isVisible(productPriceBadge)) return true;
-      }
-
-      productPriceBadge.classList.remove('zoro-adaptive-stock-badge--product-price-inline');
-      document.getElementById('LowStockAdaptiveSpacer-{{ block.id }}')?.remove();
-      if (!document.body.contains(productPriceBadge)) document.body.appendChild(productPriceBadge);
-
-      if (!positionProductPriceBadge()) {
-        removeProductPriceBadge();
-        return false;
-      }
-
-      return true;
+      renderRoot();
     };
 
-    const handleFromProductHref = (href) => {
+    const handleFromHref = (href) => {
       try {
-        const url = new URL(href, location.origin);
-        const match = url.pathname.match(/\/products\/([^/?#]+)/);
+        const match = new URL(href, location.origin).pathname.match(/\/products\/([^/?#]+)/);
         return match ? decodeURIComponent(match[1]) : '';
       } catch (error) {
         return '';
       }
     };
 
-    const relatedProductCards = () => {
-      if (root.dataset.pageType !== 'product') return [];
-
-      const currentHandle = root.dataset.currentHandle || '';
-      const seen = new Map();
-      const anchors = [...document.querySelectorAll('a[href*="/products/"]')];
-      anchors.forEach((anchor) => {
-        const handle = handleFromProductHref(anchor.href);
-        if (!handle || handle === currentHandle || seen.has(handle)) return;
-
-        const title = (anchor.textContent || '').trim();
-        const card = closestProductCard(anchor, title);
-        if (!card || !card.querySelector('img')) return;
-
-        seen.set(handle, {
-          handle,
-          card,
-          title: title
-            || card.querySelector('.card__heading, [class*="title"], h2, h3')?.textContent?.trim()
-            || handle
-        });
-      });
-
-      return [...seen.values()].slice(0, 12);
+    const productCard = (handle, title = '') => {
+      const anchors = [...document.querySelectorAll(`a[href*="/products/${cssEscape(handle)}"]`)];
+      for (const anchor of anchors) {
+        const card = anchor.closest('.card-wrapper, .card, li, article, [class*="grid__item"], [class*="product-card"]');
+        if (card && card.querySelector('img') && !card.contains(root)) return card;
+      }
+      if (!title) return null;
+      return [...document.querySelectorAll('.card-wrapper, .card, li, article, [class*="grid__item"], [class*="product-card"]')]
+        .find((node) => normalize(node.textContent).includes(title) && node.querySelector('img') && !node.contains(root));
     };
 
-    const productDataForHandle = (handle) => {
-      if (productCache.has(handle)) return productCache.get(handle);
+    const mediaTarget = (card) => {
+      if (!card) return null;
+      const target = card.querySelector('.card__media, .media, [class*="media"], [class*="image"]') || card.querySelector('img')?.parentElement;
+      if (!target) return null;
+      if (getComputedStyle(target).position === 'static') target.style.position = 'relative';
+      return target;
+    };
 
+    const makeBadge = (key, badge) => {
+      let node = document.querySelector(`[data-zoro-adaptive-stock="${cssEscape(key)}"]`);
+      if (!node) {
+        node = document.createElement('span');
+        node.className = 'zoro-adaptive-stock-badge-{{ block.id }} zoro-adaptive-stock-badge--overlay';
+        node.dataset.zoroAdaptiveStock = key;
+      }
+      node.dataset.state = badge.state;
+      node.textContent = badge.copy;
+      return node;
+    };
+
+    const placeCardBadge = (card, key, badge) => {
+      const target = mediaTarget(card);
+      if (!target) return false;
+      target.append(makeBadge(key, badge));
+      return true;
+    };
+
+    const simulatedCountFor = (handle) => {
+      if (simulatedCounts.has(handle)) return simulatedCounts.get(handle);
+      let hash = 0;
+      for (const char of String(handle)) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+      const count = 3 + (hash % Math.max(1, threshold - 2));
+      simulatedCounts.set(handle, count);
+      return count;
+    };
+
+    const fetchProduct = (handle) => {
+      if (productCache.has(handle)) return productCache.get(handle);
       const base = window.Shopify?.routes?.root || '/';
       const request = fetch(`${base}products/${encodeURIComponent(handle)}.js`, {
         credentials: 'same-origin',
-        headers: { 'Accept': 'application/json' }
+        headers: { Accept: 'application/json' }
       })
-        .then((response) => {
-          if (!response.ok) throw new Error('Product lookup failed');
-          return response.json();
-        })
+        .then((response) => response.ok ? response.json() : null)
         .then((product) => {
+          if (!product) return null;
           const variants = Array.isArray(product.variants) ? product.variants : [];
           const variant = variants.find((item) => item.available) || variants[0] || {};
           const quantity = Number(variant.inventory_quantity);
-          const tracked = Boolean(variant.inventory_management)
-            && variant.inventory_policy !== 'continue'
-            && Number.isFinite(quantity);
-
           return {
             handle,
             title: product.title || handle,
             available: product.available !== false,
             variantAvailable: variant.available !== false,
             quantity,
-            tracked
+            management: variant.inventory_management,
+            policy: variant.inventory_policy,
+            tracked: Boolean(variant.inventory_management) && variant.inventory_policy !== 'continue' && Number.isFinite(quantity)
           };
         })
         .catch(() => null);
-
       productCache.set(handle, request);
       return request;
     };
 
-    const cartLineFor = (item) => {
-      const selectors = [
-        `[href*="variant=${cssEscape(String(item.variantId))}"]`,
-        `[href="${cssEscape(item.url)}"]`,
-        `[href*="${cssEscape((item.url || '').split('?')[0])}"]`
-      ];
-      for (const selector of selectors) {
-        const anchor = document.querySelector(selector);
-        const line = anchor?.closest('.cart-item, .cart__row, tr, li, article, [data-cart-item]');
-        if (line && !line.contains(root)) return line;
-      }
-      return null;
+    const renderCollection = () => {
+      if (!collectionSource || pageType === 'product') return;
+      root.hidden = true;
+      const products = JSON.parse(collectionSource.textContent || '[]');
+      products.forEach((product) => {
+        const badge = badgeFor(product, true);
+        if (!badge) return;
+        placeCardBadge(productCard(product.handle, product.title), `{{ block.id }}-collection-${product.handle}`, badge);
+      });
     };
 
-    const isVisible = (node) => Boolean(node?.isConnected && node.getClientRects().length);
-
-    const simulatedCountFor = (handle) => {
-      if (simulatedCounts.has(handle)) return simulatedCounts.get(handle);
-
-      let hash = 0;
-      for (const char of String(handle)) {
-        hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
-      }
-
-      const max = Math.max(4, threshold);
-      const count = 3 + (hash % Math.max(1, max - 2));
-      simulatedCounts.set(handle, count);
-      return count;
+    const renderRelated = async () => {
+      if (pageType !== 'product' || relatedDisplay === 'off') return;
+      const current = root.dataset.currentHandle;
+      const handles = new Map();
+      [...document.querySelectorAll('a[href*="/products/"]')].forEach((anchor) => {
+        const handle = handleFromHref(anchor.href);
+        if (!handle || handle === current || handles.has(handle)) return;
+        const card = productCard(handle);
+        if (card) handles.set(handle, card);
+      });
+      await Promise.all([...handles].map(async ([handle, card]) => {
+        const item = await fetchProduct(handle);
+        if (!item) return;
+        const badgeItem = item.tracked || relatedDisplay !== 'exact'
+          ? item
+          : { ...item, tracked: true, quantity: simulatedCountFor(handle) };
+        const badge = badgeFor(badgeItem, true);
+        if (badge) placeCardBadge(card, `{{ block.id }}-related-${handle}`, badge);
+      }));
     };
 
-    const decrementSimulatedCounts = () => {
-      if (relatedDisplay !== 'exact') return;
+    const updateAll = () => {
+      placeRootNearPrice();
+      renderCollection();
+      renderRelated();
+    };
+
+    updateAll();
+    document.addEventListener('shopify:section:load', () => window.setTimeout(updateAll, 60));
+    ['variant:change', 'product:variant-change', 'variantChanged', 'shopify:variant:change', 'change'].forEach((eventName) => {
+      document.addEventListener(eventName, () => window.setTimeout(updateAll, 80));
+    });
+    window.addEventListener('resize', () => window.setTimeout(placeRootNearPrice, 80), { passive: true });
+    window.setInterval(() => {
       let changed = false;
       simulatedCounts.forEach((count, handle) => {
         if (count > 3) {
@@ -2027,167 +526,8 @@
           changed = true;
         }
       });
-      if (changed) renderRelatedProducts();
-    };
-
-    const mediaTargetFor = (card) => {
-      if (!card) return null;
-      const media = card.querySelector([
-        '.card__media',
-        '.media',
-        '[class*="media"]',
-        '[class*="image-wrapper"]',
-        '[class*="image"]'
-      ].join(', '));
-      const image = card.querySelector('img');
-      const target = media
-        || image?.closest('a, .card__inner, .media, [class*="media"], [class*="image"]')
-        || image?.parentElement;
-
-      if (!target || target.contains(root)) return null;
-      if (getComputedStyle(target).position === 'static') target.style.position = 'relative';
-      return target;
-    };
-
-    const placeOverlayBadge = (card, key, badge) => {
-      const existing = card?.querySelector(`[data-zoro-adaptive-stock="${key}"]`);
-      if (existing) {
-        existing.dataset.state = badge.state;
-        existing.textContent = badge.copy;
-        return isVisible(existing);
-      }
-      const target = mediaTargetFor(card);
-      if (!target) return false;
-      const node = makeBadge(key, badge, 'overlay');
-      target.append(node);
-      return isVisible(node);
-    };
-
-    const placeBadge = (target, key, badge, selector, mode = '') => {
-      const existing = target?.querySelector(`[data-zoro-adaptive-stock="${key}"]`);
-      if (existing) {
-        if (mode === 'cart') existing.classList.add('zoro-adaptive-stock-badge--cart-line');
-        return isVisible(existing);
-      }
-      if (!target) return false;
-      const anchor = target.querySelector(selector);
-      const node = makeBadge(key, badge);
-      if (mode === 'cart') node.classList.add('zoro-adaptive-stock-badge--cart-line');
-      (anchor || target).insertAdjacentElement('afterend', node);
-      return isVisible(node);
-    };
-
-    const renderCollection = () => {
-      if (!collectionSource || root.dataset.pageType === 'product') return;
-      const products = JSON.parse(collectionSource.textContent || '[]');
-      const inlineEntries = [];
-      let placed = 0;
-      products.forEach((product) => {
-        const badge = badgeFor(product);
-        if (!badge) return;
-        const key = '{{ block.id }}-collection-' + product.handle;
-        inlineEntries.push({ key, title: product.title, badge });
-        if (placeOverlayBadge(productCardFor(product), key, badge)) placed += 1;
-      });
-
-      if (!cartSource || inlineEntries.length || placed === 0) {
-        clearInline();
-      }
-    };
-
-    const renderProductPageOverlay = () => {
-      removeCurrentProductOverlay();
-      removeProductPriceBadge();
-      hideProductInline();
-    };
-
-    const renderRelatedProducts = async () => {
-      if (cartSource || root.dataset.pageType !== 'product') return;
-
-      const cards = relatedProductCards();
-      if (!cards.length) {
-        hideProductInline();
-        return;
-      }
-
-      let placed = 0;
-      await Promise.all(cards.map(async (entry) => {
-        const item = await productDataForHandle(entry.handle);
-        if (!item) return;
-
-        const itemForBadge = item.tracked || item.available === false || relatedDisplay !== 'exact'
-          ? item
-          : { ...item, tracked: true, quantity: simulatedCountFor(entry.handle) };
-        const badge = relatedBadgeFor(itemForBadge);
-        if (!badge) return;
-
-        if (placeOverlayBadge(
-          entry.card,
-          '{{ block.id }}-related-' + entry.handle,
-          badge
-        )) placed += 1;
-      }));
-
-      hideProductInline();
-      if (placed > 0) clearInline();
-    };
-
-    const renderCart = () => {
-      if (!cartSource) return;
-      const items = JSON.parse(cartSource.textContent || '[]');
-      const inlineEntries = [];
-      let placed = 0;
-      items.forEach((item) => {
-        const badge = badgeFor(item);
-        if (!badge) return;
-        const key = '{{ block.id }}-cart-' + item.key;
-        inlineEntries.push({ key, title: item.title, badge });
-        if (placeBadge(
-          cartLineFor(item),
-          key,
-          badge,
-          '.cart-item__details, .cart-item__name, .cart__meta, td, h3, a',
-          'cart'
-        )) placed += 1;
-      });
-
-      if (!collectionSource || inlineEntries.length || placed === 0) {
-        clearInline();
-      }
-    };
-
-    renderCollection();
-    renderCart();
-    renderProductPageOverlay();
-    renderRelatedProducts();
-    document.addEventListener('shopify:section:load', () => {
-      removeCurrentProductOverlay();
-      renderCollection();
-      renderCart();
-      renderProductPageOverlay();
-      renderRelatedProducts();
-    });
-    document.addEventListener('cart:updated', renderCart);
-    window.addEventListener('resize', () => window.requestAnimationFrame(positionProductPriceBadge));
-    window.addEventListener('scroll', () => window.requestAnimationFrame(positionProductPriceBadge), { passive: true });
-    ['variant:change', 'product:variant-change', 'variantChanged', 'shopify:variant:change']
-      .forEach((name) => document.addEventListener(name, () => {
-        window.setTimeout(() => {
-          renderProductPageOverlay();
-          renderRelatedProducts();
-        }, 80);
-      }));
-    document.addEventListener('change', (event) => {
-      if (event.target.closest(
-        'variant-selects, variant-radios, [data-variant-selector], form[action*="/cart/add"]'
-      )) {
-        window.setTimeout(() => {
-          renderProductPageOverlay();
-          renderRelatedProducts();
-        }, 80);
-      }
-    });
-    window.setInterval(decrementSimulatedCounts, 7000);
+      if (changed) renderRelated();
+    }, 7000);
   })();
 </script>
 
@@ -2236,8 +576,7 @@
         { "value": "simple", "label": "Simple low stock / sold out badges" },
         { "value": "exact", "label": "Exact or countdown counts" },
         { "value": "off", "label": "Hide related product badges" }
-      ],
-      "info": "Simple badges are recommended on product pages to avoid distracting shoppers from the main product."
+      ]
     },
     {
       "type": "checkbox",
@@ -2262,56 +601,6 @@
       "id": "sold_out_badge_text",
       "label": "Sold-out badge text",
       "default": "Sold out"
-    },
-    {
-      "type": "header",
-      "content": "Add both to cart"
-    },
-    {
-      "type": "product",
-      "id": "companion_product",
-      "label": "Companion product",
-      "info": "Optional. Select a second product to offer with this product."
-    },
-    {
-      "type": "text",
-      "id": "companion_heading",
-      "label": "Offer heading",
-      "default": "Complete the set"
-    },
-    {
-      "type": "text",
-      "id": "add_both_text",
-      "label": "Button text",
-      "default": "Add both to cart"
-    },
-    {
-      "type": "text",
-      "id": "adding_text",
-      "label": "Loading text",
-      "default": "Adding..."
-    },
-    {
-      "type": "text",
-      "id": "added_text",
-      "label": "Success text",
-      "default": "Both items added"
-    },
-    {
-      "type": "text",
-      "id": "add_error_text",
-      "label": "Error text",
-      "default": "Could not add both items. Please try again."
-    },
-    {
-      "type": "select",
-      "id": "after_add",
-      "label": "After adding",
-      "default": "cart",
-      "options": [
-        { "value": "cart", "label": "Open cart" },
-        { "value": "stay", "label": "Stay on product page" }
-      ]
     },
     {
       "type": "header",
@@ -2343,12 +632,6 @@
       "default": "This item is currently sold out."
     },
     {
-      "type": "text",
-      "id": "editor_help_text",
-      "label": "Wrong-template editor message",
-      "default": "Open a product template and place this block below the price."
-    },
-    {
       "type": "select",
       "id": "message_language",
       "label": "Message language",
@@ -2373,7 +656,7 @@
       "default": "card",
       "options": [
         { "value": "card", "label": "Card" },
-        { "value": "compact", "label": "Compact" },
+        { "value": "compact", "label": "Compact pill" },
         { "value": "text", "label": "Text only" }
       ]
     },
@@ -2444,16 +727,6 @@
     },
     {
       "type": "range",
-      "id": "top_spacing",
-      "min": 0,
-      "max": 40,
-      "step": 2,
-      "unit": "px",
-      "label": "Space above",
-      "default": 12
-    },
-    {
-      "type": "range",
       "id": "progress_height",
       "min": 2,
       "max": 10,
@@ -2496,18 +769,6 @@
       "type": "color",
       "id": "badge_text_color",
       "label": "Sold-out badge text",
-      "default": "#ffffff"
-    },
-    {
-      "type": "color",
-      "id": "button_background",
-      "label": "Add-both button background",
-      "default": "#008060"
-    },
-    {
-      "type": "color",
-      "id": "button_text_color",
-      "label": "Add-both button text",
       "default": "#ffffff"
     }
   ]
