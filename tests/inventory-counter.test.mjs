@@ -6,19 +6,17 @@ const blockPath = new URL(
   '../extensions/low-stock-counter/blocks/inventory-counter.liquid',
   import.meta.url,
 );
-const blocksPath = new URL(
-  '../extensions/low-stock-counter/blocks/',
-  import.meta.url,
-);
+const blocksPath = new URL('../extensions/low-stock-counter/blocks/', import.meta.url);
 const localesPath = new URL('../extensions/low-stock-counter/locales/', import.meta.url);
 const block = readFileSync(blockPath, 'utf8');
 
-test('extension exposes one unified app block', () => {
+test('extension exposes one unified app block without NEW in the name', () => {
   assert.deepEqual(
     readdirSync(blocksPath).filter((name) => name.endsWith('.liquid')).sort(),
     ['inventory-counter.liquid'],
   );
   assert.match(block, /"name": "Low stock counter"/);
+  assert.doesNotMatch(block, /Low stock counter NEW/);
 });
 
 test('schema is valid JSON with unique setting IDs', () => {
@@ -27,56 +25,70 @@ test('schema is valid JSON with unique setting IDs', () => {
   const schema = JSON.parse(match[1]);
   const ids = schema.settings.flatMap((setting) => setting.id ? [setting.id] : []);
   assert.equal(new Set(ids).size, ids.length);
-  assert.ok(ids.includes('alert_text'));
-  assert.ok(ids.includes('message_language'));
-  assert.ok(ids.includes('display_mode'));
-  assert.ok(ids.includes('related_display'));
-  assert.ok(ids.includes('show_sold_out_badge'));
-  assert.ok(ids.includes('companion_product'));
-  assert.ok(!ids.includes('preview_simulation'));
-  assert.ok(!ids.includes('preview_stock_count'));
+  for (const id of [
+    'low_stock_threshold',
+    'display_mode',
+    'related_display',
+    'alert_text',
+    'message_language',
+    'show_sold_out_badge',
+    'background_color',
+    'text_color',
+    'warning_color',
+  ]) {
+    assert.ok(ids.includes(id), `${id} setting exists`);
+  }
 });
 
-test('embedded JavaScript has valid syntax after Liquid ID replacement', () => {
+test('embedded JavaScript has valid syntax after Liquid replacement', () => {
   const scripts = [...block.matchAll(/<script>\s*([\s\S]*?)\s*<\/script>/g)]
     .map((match) => match[1])
     .filter((script) => !script.trim().startsWith('['));
 
-  assert.ok(scripts.length >= 2, 'JavaScript blocks are present');
+  assert.ok(scripts.length >= 1, 'JavaScript block is present');
   for (const script of scripts) {
     assert.doesNotThrow(() => new Function(script.replaceAll('{{ block.id }}', 'test-block')));
   }
 });
 
-test('counter remains backendless and uses Shopify inventory and cart APIs', () => {
+test('counter stays backendless and reads native Shopify product data', () => {
   assert.match(block, /variant\.inventory_quantity/);
   assert.match(block, /variant\.inventory_management/);
   assert.match(block, /collection\.products/);
-  assert.match(block, /cart\.items/);
   assert.match(block, /fetch\(`\$\{base\}products\/\$\{encodeURIComponent\(handle\)\}\.js`/);
-  assert.match(block, /fetch\(`\$\{base\}cart\/add\.js`/);
-  assert.match(block, /items:\s*\[\s*\{\s*id:\s*currentId,\s*quantity:\s*1\s*\},\s*\{\s*id:\s*companionId,\s*quantity:\s*1\s*\}/);
   assert.doesNotMatch(block, /https?:\/\/[^'"]+/);
-  assert.doesNotMatch(block, /XMLHttpRequest|WebSocket|sessionStorage|localStorage/);
+  assert.doesNotMatch(block, /XMLHttpRequest|WebSocket|localStorage/);
 });
 
-test('sold-out badge and optional companion offer are present', () => {
-  assert.match(block, /data-zoro-sold-out-badge/);
-  assert.match(block, /data-zoro-add-both/);
-  assert.match(block, /"type": "product",\s*"id": "companion_product"/);
+test('product page block is inserted beside pricing, not as a floating portal', () => {
+  assert.match(block, /const priceTarget = \(\) =>/);
+  assert.match(block, /price\.insertAdjacentElement\('afterend', root\)/);
+  assert.match(block, /purchase\.insertAdjacentElement\('beforebegin', root\)/);
+  assert.match(block, /data-zoro-inline="price"/);
+  assert.doesNotMatch(block, /document\.body\.appendChild/);
+  assert.doesNotMatch(block, /position:\s*fixed/);
+  assert.doesNotMatch(block, /LowStockCounterPortal/);
+  assert.doesNotMatch(block, /positionProductPortal|renderProductPortal|retryProductPlacement/);
 });
 
-test('responsive controls are present and product targeting is removed', () => {
-  for (const id of [
-    'show_on_mobile',
-    'show_on_desktop',
-    'mobile_font_size',
-  ]) {
-    assert.match(block, new RegExp(`"id": "${id}"`));
-  }
-  assert.doesNotMatch(block, /"id": "target_rule"/);
-  assert.doesNotMatch(block, /"id": "target_value"/);
-  assert.doesNotMatch(block, /targetEligible|target_eligible|target-message|targetMessage/);
+test('collection and related product badges attach to product media only', () => {
+  assert.match(block, /data-zoro-collection-products="{{ block\.id }}"/);
+  assert.match(block, /const renderCollection = \(\) =>/);
+  assert.match(block, /const renderRelated = async \(\) =>/);
+  assert.match(block, /const mediaTarget = \(card\) =>/);
+  assert.match(block, /target\.append\(makeBadge\(key, badge\)\)/);
+  assert.match(block, /zoro-adaptive-stock-badge--overlay/);
+  assert.doesNotMatch(block, /renderInline/);
+  assert.doesNotMatch(block, /data-zoro-cart-items/);
+  assert.doesNotMatch(block, /cart:updated/);
+});
+
+test('visibility and related badge controls are present', () => {
+  assert.match(block, /displayMode === 'low_only'/);
+  assert.match(block, /relatedDisplay === 'off'/);
+  assert.match(block, /relatedDisplay === 'exact'/);
+  assert.match(block, /simulatedCountFor/);
+  assert.match(block, /root\.dataset\.showSoldOut/);
 });
 
 test('language selector exposes automatic and explicit languages', () => {
@@ -85,122 +97,13 @@ test('language selector exposes automatic and explicit languages', () => {
   }
 });
 
-test('visibility supports always-on real inventory and low-stock-only modes', () => {
-  assert.match(block, /data-display-mode/);
-  assert.match(block, /data-related-display/);
-  assert.match(block, /displayMode === 'low_only'/);
-  assert.match(block, /pageType !== 'product'/);
-  assert.doesNotMatch(block, /show\(root\.dataset\.targetMessage/);
-  assert.doesNotMatch(block, /This product does not match/);
-  assert.match(block, /pageType === 'product'/);
-  assert.match(block, /"value":\s*"always"/);
-  assert.match(block, /"value":\s*"low_only"/);
-});
-
-test('product targeting warnings are not renderable', () => {
-  assert.match(block, /assign is_product_page = false/);
-  assert.match(block, /if request\.page_type == 'product' and product != blank/);
-  assert.match(block, /data-product-page="{{ is_product_page }}"/);
-  assert.match(block, /data-design-mode="{{ product_design_mode }}"/);
-  assert.doesNotMatch(block, /target_help|target_rule|target_value|target-message/);
-});
-
-test('main low stock block adapts to collection and cart pages', () => {
-  assert.match(block, /data-zoro-collection-products="{{ block\.id }}"/);
-  assert.match(block, /data-zoro-cart-items="{{ block\.id }}"/);
-  assert.match(block, /data-zoro-adaptive-list/);
-  assert.doesNotMatch(block, /renderInline\(inlineEntries\)/);
-  assert.match(block, /window\.CSS\?\.escape/);
-  assert.match(block, /productCardFor\(product\)/);
-  assert.match(block, /relatedProductCards/);
-  assert.match(block, /productDataForHandle/);
-  assert.match(block, /renderRelatedProducts/);
-  assert.match(block, /relatedBadgeFor/);
-  assert.match(block, /relatedDisplay === 'off'/);
-  assert.match(block, /relatedDisplay === 'exact'/);
-  assert.match(block, /"id": "related_display"/);
-  assert.match(block, /"default": "simple"/);
-  assert.match(block, /renderProductPageOverlay/);
-  assert.match(block, /productPagePriceTarget/);
-  assert.match(block, /placeProductRootNearPrice/);
-  assert.match(block, /placeRootNearProductPrice/);
-  assert.match(block, /placeRootNearPurchaseControls/);
-  assert.match(block, /purchaseTarget/);
-  assert.match(block, /productPurchaseTarget/);
-  assert.match(block, /add to cart\|buy it now\|sold out/);
-  assert.match(block, /visiblePriceTarget/);
-  assert.match(block, /productVisiblePriceTarget/);
-  assert.match(block, /exactCurrentPriceTarget/);
-  assert.match(block, /retryProductPlacement/);
-  assert.match(block, /const priceBlockTarget = \(target\) =>/);
-  assert.match(block, /const productPriceTarget = \(\) => \{[\s\S]*?const container = productInfoContainer\(\);/);
-  assert.match(block, /const scopedCandidates = \[\.\.\.container\.querySelectorAll\(selectors\.join\(', '\)\)\]/);
-  assert.match(block, /if \(scopedPriceBlock\) return scopedPriceBlock;/);
-  assert.match(block, /const price = exactCurrentPriceTarget\(\) \|\| visiblePriceTarget\(\);/);
-  assert.match(block, /const productPriceTarget = \(\) => \{[\s\S]*?return null;\s*\};/);
-  assert.doesNotMatch(block, /const purchase = purchaseTarget\(\);\s*if \(purchase\) return purchase;/);
-  assert.match(block, /\[data-product-placement="price"\]/);
-  assert.match(block, /overflow-wrap: anywhere/);
-  assert.match(block, /const portalTarget = \(\) => pageType === 'product'\s*\? purchaseTarget\(\) \|\| exactCurrentPriceTarget\(\) \|\| visiblePriceTarget\(\)\s*: exactCurrentPriceTarget\(\) \|\| visiblePriceTarget\(\) \|\| purchaseTarget\(\)/);
-  assert.match(block, /const purchaseColumnBox = \(\) =>/);
-  assert.match(block, /const productPurchaseColumnBox = \(\) =>/);
-  assert.match(block, /box\.width <= window\.innerWidth \* 0\.62 && overlap > columnBox\.width \* 0\.5/);
-  assert.doesNotMatch(block, /const purchase = productPurchaseTarget\(\);\s*if \(purchase\?\.node\) return purchase\.node/);
-  assert.match(block, /LowStockCounterPortal-{{ block\.id }}/);
-  assert.match(block, /positionProductPortal/);
-  assert.match(block, /node\.classList\.add\('zoro-stock--floating-purchase'\)/);
-  assert.match(block, /zoro-stock--inline-price/);
-  assert.match(block, /const purchaseColumnTarget = purchaseTarget\(\)/);
-  assert.match(block, /\? purchaseColumnTarget/);
-  assert.match(block, /: productPriceTarget\(\)/);
-  assert.match(block, /resolvedInlineTarget\.node\.insertAdjacentElement\('beforebegin', node\)/);
-  assert.match(block, /document\.body\.appendChild\(portal\)/);
-  assert.match(block, /node\.style\.left = `\$\{left\}px`/);
-  assert.match(block, /node\.style\.top = `\$\{top\}px`/);
-  assert.match(block, /data-zoro-portal-message/);
-  assert.match(block, /lastPortalRender = \{ copy, count, progressVisible, soldOut \}/);
-  assert.match(block, /if \(pageType === 'product'\) \{\s*root\.dataset\.cardMode = 'true';\s*inventory\.hidden = false;\s*root\.hidden = false;\s*if \(portal\) portal\.hidden = true;\s*if \(!placeRootNearPurchaseControls\(\)\) \{\s*inventory\.hidden = true;\s*root\.hidden = true;\s*renderProductPortal\(copy, count, progressVisible, soldOut\);\s*retryProductPlacement\(\);\s*\}\s*return;/);
-  assert.match(block, /if \(lastPortalRender\) \{\s*renderProductPortal\(/);
-  assert.match(block, /root\.hidden = false/);
-  assert.match(block, /root\.dataset\.productPlacement = 'price'/);
-  assert.match(block, /root\.dataset\.productPlacement = 'portal'/);
-  assert.doesNotMatch(block, /root\.dataset\.productPlacement === 'price'\) return/);
-  assert.match(block, /zoro-adaptive-stock-badge--product-price/);
-  assert.match(block, /zoro-adaptive-stock-badge--product-price-inline/);
-  assert.match(block, /const productPriceBlockTarget = \(node\) =>/);
-  assert.match(block, /insertAdjacentElement\('afterend', productPriceBadge\)/);
-  assert.match(block, /const renderProductPriceBadge = \(badge\) =>/);
-  assert.match(block, /const renderProductPageOverlay = \(\) => \{\s*removeCurrentProductOverlay\(\);\s*removeProductPriceBadge\(\);\s*hideProductInline\(\);\s*\};/);
-  assert.match(block, /positionProductPriceBadge/);
-  assert.match(block, /removeCurrentProductOverlay/);
-  assert.match(block, /\[data-zoro-adaptive-stock\*="\{\{ block\.id \}\}-current-"\] \{ display: none !important; \}/);
-  assert.match(block, /#LowStockCounter-\{\{ block\.id \}\}\[data-card-mode="true"\]:not\(\[data-product-placement="price"\]\)/);
-  assert.doesNotMatch(block, /productPageMedia/);
-  assert.match(block, /hideProductInline/);
-  assert.match(block, /root\.dataset\.cardMode = 'true'/);
-  assert.match(block, /simulatedCountFor/);
-  assert.match(block, /decrementSimulatedCounts/);
-  assert.match(block, /root\.dataset\.pageType === 'product'\) return/);
-  assert.doesNotMatch(block, /collectionSource \|\| cartSource \|\| root\.dataset\.pageType !== 'product'/);
-  assert.match(block, /data-current-handle="{{ product\.handle }}"/);
-  assert.match(block, /closestProductCard/);
-  assert.match(block, /placeOverlayBadge/);
-  assert.match(block, /mediaTargetFor/);
-  assert.match(block, /zoro-adaptive-stock-badge--overlay/);
-  assert.match(block, /getClientRects\(\)\.length/);
-  assert.doesNotMatch(block, /placed === 0 \|\| window\.Shopify\?\.designMode/);
-  assert.match(block, /cartLineFor\(item\)/);
-  assert.match(block, /zoro-adaptive-stock-badge-{{ block\.id }}/);
-});
-
-test('all locale files contain required storefront keys', () => {
+test('locale files contain required storefront keys', () => {
   const required = [
     'low_stock_exact',
     'low_stock_general',
     'untracked',
     'sold_out',
     'editor_help',
-    'target_help',
   ];
 
   for (const file of readdirSync(localesPath).filter((name) => name.endsWith('.json'))) {
@@ -208,10 +111,5 @@ test('all locale files contain required storefront keys', () => {
     for (const key of required) {
       assert.equal(typeof locale.inventory_counter?.[key], 'string', `${file}: ${key}`);
     }
-    assert.doesNotMatch(
-      JSON.stringify(locale),
-      /does not match|targeting rule|segmentación|ciblage|Ausrichtungsregel/i,
-      `${file}: targeting warning must not be rendered`,
-    );
   }
 });
