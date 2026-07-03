@@ -2,580 +2,211 @@
   assign active_variant = product.selected_or_first_available_variant
   assign threshold = block.settings.low_stock_threshold | default: 10
   assign is_product_page = false
+
   if request.page_type == 'product' and product != blank
     assign is_product_page = true
   endif
-
-  assign low_message = block.settings.alert_text
-  assign general_message = block.settings.general_low_stock_text
-  assign untracked_message = block.settings.untracked_text
-  assign sold_out_message = block.settings.sold_out_text
-
-  case block.settings.message_language
-    when 'auto'
-      assign low_message = 'inventory_counter.low_stock_exact' | t
-      assign general_message = 'inventory_counter.low_stock_general' | t
-      assign untracked_message = 'inventory_counter.untracked' | t
-      assign sold_out_message = 'inventory_counter.sold_out' | t
-    when 'en'
-      assign low_message = 'Hurry! Only [count] items left in stock!'
-      assign general_message = 'Low stock - order soon!'
-      assign untracked_message = 'Popular right now'
-      assign sold_out_message = 'This item is currently sold out.'
-    when 'es'
-      assign low_message = 'Date prisa. Solo quedan [count] unidades.'
-      assign general_message = 'Quedan pocas unidades. Haz tu pedido pronto.'
-      assign untracked_message = 'Muy popular ahora'
-      assign sold_out_message = 'Este articulo esta agotado.'
-    when 'fr'
-      assign low_message = 'Depechez-vous, il ne reste que [count] articles.'
-      assign general_message = 'Stock faible, commandez bientot.'
-      assign untracked_message = 'Tres populaire en ce moment'
-      assign sold_out_message = 'Cet article est actuellement epuise.'
-    when 'de'
-      assign low_message = 'Beeilung! Nur noch [count] Artikel auf Lager.'
-      assign general_message = 'Nur noch wenige verfugbar. Bald bestellen.'
-      assign untracked_message = 'Gerade sehr beliebt'
-      assign sold_out_message = 'Dieser Artikel ist derzeit ausverkauft.'
-  endcase
 %}
 
-<div
-  id="LowStockCounter-{{ block.id }}"
-  class="zoro-stock zoro-stock--{{ block.settings.layout }} zoro-stock--{{ block.settings.alignment }}{% unless block.settings.show_on_mobile %} zoro-stock--hide-mobile{% endunless %}{% unless block.settings.show_on_desktop %} zoro-stock--hide-desktop{% endunless %}"
-  style="
-    --zoro-bg: {{ block.settings.background_color }};
-    --zoro-text: {{ block.settings.text_color }};
-    --zoro-accent: {{ block.settings.warning_color }};
-    --zoro-track: {{ block.settings.track_color }};
-    --zoro-badge-bg: {{ block.settings.badge_background }};
-    --zoro-badge-text: {{ block.settings.badge_text_color }};
-    --zoro-radius: {{ block.settings.corner_radius }}px;
-    --zoro-size: {{ block.settings.font_size }}px;
-    --zoro-mobile-size: {{ block.settings.mobile_font_size }}px;
-    --zoro-progress-height: {{ block.settings.progress_height }}px;
-    {% unless is_product_page %}display: none !important;{% endunless %}
-  "
-  data-zoro-stock
-  data-page-type="{{ request.page_type }}"
-  data-product-page="{{ is_product_page }}"
-  data-product-id="{{ product.id }}"
-  data-current-handle="{{ product.handle }}"
-  data-current-money="{{ active_variant.price | money | strip_html | escape }}"
-  data-current-price="{{ active_variant.price | money_without_currency | escape }}"
-  data-variant-id="{{ active_variant.id }}"
-  data-threshold="{{ threshold }}"
-  data-display-mode="{{ block.settings.display_mode }}"
-  data-related-display="{{ block.settings.related_display }}"
-  data-low-message="{{ low_message | escape }}"
-  data-general-message="{{ general_message | escape }}"
-  data-untracked-message="{{ untracked_message | escape }}"
-  data-sold-out-message="{{ sold_out_message | escape }}"
-  data-count-display="{{ block.settings.count_display }}"
-  data-show-untracked="{{ block.settings.show_untracked }}"
-  data-show-sold-out="{{ block.settings.show_sold_out }}"
-  data-show-progress="{{ block.settings.show_progress }}"
-  hidden
-  {{ block.shopify_attributes }}
->
-  <div class="zoro-stock__alert" role="status" aria-live="polite" aria-atomic="true">
-    {% if block.settings.show_pulse %}
-      <span class="zoro-stock__pulse" aria-hidden="true"></span>
+{% if is_product_page %}
+  <div
+    id="LowStockCounter-{{ block.id }}"
+    class="zoro-low-stock"
+    style="
+      --zoro-low-stock-bg: {{ block.settings.background_color }};
+      --zoro-low-stock-text: {{ block.settings.text_color }};
+      --zoro-low-stock-accent: {{ block.settings.warning_color }};
+      --zoro-low-stock-track: {{ block.settings.track_color }};
+      --zoro-low-stock-radius: {{ block.settings.corner_radius }}px;
+      --zoro-low-stock-size: {{ block.settings.font_size }}px;
+      --zoro-low-stock-gap-top: {{ block.settings.spacing_top }}px;
+      --zoro-low-stock-gap-bottom: {{ block.settings.spacing_bottom }}px;
+    "
+    data-zoro-low-stock
+    data-threshold="{{ threshold }}"
+    data-alert-text="{{ block.settings.alert_text | escape }}"
+    data-sold-out-text="{{ block.settings.sold_out_text | escape }}"
+    data-show-progress="{{ block.settings.show_progress }}"
+    data-show-sold-out="{{ block.settings.show_sold_out }}"
+    data-current-variant="{{ active_variant.id }}"
+    hidden
+    {{ block.shopify_attributes }}
+  >
+    <div class="zoro-low-stock__message" role="status" aria-live="polite" aria-atomic="true">
+      <span class="zoro-low-stock__dot" aria-hidden="true"></span>
+      <span data-zoro-low-stock-message></span>
+    </div>
+
+    {% if block.settings.show_progress %}
+      <div class="zoro-low-stock__track" data-zoro-low-stock-track aria-hidden="true">
+        <span class="zoro-low-stock__fill" data-zoro-low-stock-fill></span>
+      </div>
     {% endif %}
-    <span data-zoro-message></span>
-    {% if block.settings.show_sold_out_badge %}
-      <span class="zoro-stock__badge" data-zoro-sold-out-badge hidden>{{ block.settings.sold_out_badge_text }}</span>
-    {% endif %}
+
+    <script type="application/json" data-zoro-low-stock-variants>
+      [
+        {% for variant in product.variants %}
+          {
+            "id": {{ variant.id | json }},
+            "available": {{ variant.available | json }},
+            "quantity": {{ variant.inventory_quantity | json }},
+            "management": {{ variant.inventory_management | json }},
+            "policy": {{ variant.inventory_policy | json }}
+          }{% unless forloop.last %},{% endunless %}
+        {% endfor %}
+      ]
+    </script>
   </div>
 
-  <div class="zoro-stock__track" data-zoro-progress role="progressbar" aria-label="Stock remaining" aria-valuemin="0" aria-valuemax="{{ threshold }}" aria-valuenow="0">
-    <span class="zoro-stock__fill" data-zoro-fill></span>
-  </div>
+  <style>
+    #LowStockCounter-{{ block.id }} {
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      margin: var(--zoro-low-stock-gap-top) 0 var(--zoro-low-stock-gap-bottom);
+      padding: 0.75rem 0.9rem;
+      border: 1px solid color-mix(in srgb, var(--zoro-low-stock-accent) 22%, transparent);
+      border-radius: var(--zoro-low-stock-radius);
+      background: var(--zoro-low-stock-bg);
+      color: var(--zoro-low-stock-text);
+      font-family: var(--font-body-family, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+      font-size: var(--zoro-low-stock-size);
+      line-height: 1.3;
+      clear: both;
+      position: static;
+      z-index: auto;
+    }
 
-  <script type="application/json" data-zoro-variants>
-    [
-      {% for variant in product.variants %}
-        {
-          "id": {{ variant.id | json }},
-          "available": {{ variant.available | json }},
-          "quantity": {{ variant.inventory_quantity | json }},
-          "management": {{ variant.inventory_management | json }},
-          "policy": {{ variant.inventory_policy | json }}
-        }{% unless forloop.last %},{% endunless %}
-      {% endfor %}
-    ]
-  </script>
-</div>
+    #LowStockCounter-{{ block.id }}[hidden] {
+      display: none !important;
+    }
 
-{% if collection != blank %}
-  <script type="application/json" data-zoro-collection-products="{{ block.id }}">
-    [
-      {% for card_product in collection.products %}
-        {% liquid
-          assign card_variant = card_product.selected_or_first_available_variant
-          assign card_tracked = false
-          if card_variant.inventory_management != blank and card_variant.inventory_policy != 'continue'
-            assign card_tracked = true
-          endif
-        %}
-        {
-          "handle": {{ card_product.handle | json }},
-          "title": {{ card_product.title | json }},
-          "available": {{ card_product.available | json }},
-          "variantAvailable": {{ card_variant.available | json }},
-          "quantity": {{ card_variant.inventory_quantity | json }},
-          "tracked": {{ card_tracked | json }}
-        }{% unless forloop.last %},{% endunless %}
-      {% endfor %}
-    ]
+    #LowStockCounter-{{ block.id }} .zoro-low-stock__message {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      font-weight: 700;
+    }
+
+    #LowStockCounter-{{ block.id }} .zoro-low-stock__dot {
+      width: 0.48rem;
+      height: 0.48rem;
+      flex: 0 0 auto;
+      border-radius: 999px;
+      background: var(--zoro-low-stock-accent);
+      animation: zoro-low-stock-pulse-{{ block.id }} 1.55s ease-out infinite;
+    }
+
+    #LowStockCounter-{{ block.id }} .zoro-low-stock__track {
+      height: 0.35rem;
+      margin-top: 0.65rem;
+      overflow: hidden;
+      border-radius: 999px;
+      background: var(--zoro-low-stock-track);
+    }
+
+    #LowStockCounter-{{ block.id }} .zoro-low-stock__fill {
+      display: block;
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--zoro-low-stock-accent);
+      transition: width 240ms ease;
+    }
+
+    @keyframes zoro-low-stock-pulse-{{ block.id }} {
+      0% {
+        box-shadow: 0 0 0 0 color-mix(in srgb, var(--zoro-low-stock-accent) 42%, transparent);
+        transform: scale(0.92);
+      }
+      75%,
+      100% {
+        box-shadow: 0 0 0 0.55rem transparent;
+        transform: scale(1);
+      }
+    }
+  </style>
+
+  <script>
+    (() => {
+      const root = document.getElementById('LowStockCounter-{{ block.id }}');
+      if (!root) return;
+
+      const data = root.querySelector('[data-zoro-low-stock-variants]');
+      const message = root.querySelector('[data-zoro-low-stock-message]');
+      const fill = root.querySelector('[data-zoro-low-stock-fill]');
+      const threshold = Math.max(0, Number(root.dataset.threshold || 10));
+      const alertText = root.dataset.alertText || 'Hurry! Only [count] items left in stock!';
+      const soldOutText = root.dataset.soldOutText || 'This item is currently sold out.';
+      const showSoldOut = root.dataset.showSoldOut === 'true';
+
+      let variants = [];
+      try {
+        variants = JSON.parse(data?.textContent || '[]');
+      } catch (error) {
+        variants = [];
+      }
+
+      const byId = new Map(variants.map((variant) => [String(variant.id), variant]));
+
+      const selectedVariantId = () => {
+        const params = new URLSearchParams(window.location.search);
+        const fromUrl = params.get('variant');
+        if (fromUrl && byId.has(fromUrl)) return fromUrl;
+
+        const input = document.querySelector('form[action*="/cart/add"] [name="id"]');
+        if (input?.value && byId.has(String(input.value))) return String(input.value);
+
+        return root.dataset.currentVariant || String(variants[0]?.id || '');
+      };
+
+      const setProgress = (quantity) => {
+        if (!fill) return;
+        const percent = threshold > 0 ? Math.max(0, Math.min(100, (quantity / threshold) * 100)) : 0;
+        fill.style.width = `${percent}%`;
+      };
+
+      const render = () => {
+        const variant = byId.get(selectedVariantId());
+        if (!variant) {
+          root.hidden = true;
+          return;
+        }
+
+        const tracked = Boolean(variant.management) && variant.policy !== 'continue';
+        const quantity = Number(variant.quantity);
+
+        if (!variant.available || (tracked && quantity <= 0)) {
+          if (!showSoldOut) {
+            root.hidden = true;
+            return;
+          }
+          message.textContent = soldOutText;
+          setProgress(0);
+          root.hidden = false;
+          return;
+        }
+
+        if (!tracked || !Number.isFinite(quantity) || quantity > threshold) {
+          root.hidden = true;
+          return;
+        }
+
+        message.textContent = alertText.replace(/\[count\]/g, String(quantity));
+        setProgress(quantity);
+        root.hidden = false;
+      };
+
+      document.addEventListener('change', render);
+      document.addEventListener('input', render);
+      document.addEventListener('variant:change', render);
+      document.addEventListener('shopify:section:load', render);
+      window.addEventListener('popstate', render);
+      render();
+      setTimeout(render, 120);
+    })();
   </script>
 {% endif %}
-
-<style>
-  #LowStockCounter-{{ block.id }} {
-    box-sizing: border-box;
-    width: 100%;
-    max-width: 100%;
-    margin: 1rem 0 1.35rem;
-    padding: .55rem .7rem;
-    border: 1px solid color-mix(in srgb, var(--zoro-accent) 18%, transparent);
-    border-radius: var(--zoro-radius);
-    color: var(--zoro-text);
-    background: var(--zoro-bg);
-    font-family: var(--font-body-family, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
-    font-size: var(--zoro-size);
-    line-height: 1.3;
-    clear: both;
-    position: static;
-    z-index: 0;
-  }
-  #LowStockCounter-{{ block.id }}[hidden] { display: none !important; }
-  #LowStockCounter-{{ block.id }}[data-zoro-inline="price"] {
-    display: block !important;
-    position: relative !important;
-    inset: auto !important;
-    z-index: 1 !important;
-    transform: none !important;
-    width: 100% !important;
-    flex: 0 0 100% !important;
-    grid-column: 1 / -1 !important;
-    margin-top: 1rem !important;
-    margin-bottom: 2rem !important;
-    pointer-events: none;
-  }
-  #LowStockCounter-{{ block.id }}[data-zoro-inline="price"] + * {
-    margin-top: 1.15rem !important;
-  }
-  #LowStockCounter-{{ block.id }}.zoro-stock--compact {
-    padding: .42rem .6rem;
-    border-radius: 999px;
-  }
-  #LowStockCounter-{{ block.id }}.zoro-stock--text {
-    padding: 0;
-    border: 0;
-    background: transparent;
-  }
-  #LowStockCounter-{{ block.id }} .zoro-stock__alert {
-    display: flex;
-    align-items: center;
-    gap: .55rem;
-    font-weight: 700;
-  }
-  #LowStockCounter-{{ block.id }}.zoro-stock--center .zoro-stock__alert { justify-content: center; text-align: center; }
-  #LowStockCounter-{{ block.id }}.zoro-stock--right .zoro-stock__alert { justify-content: flex-end; text-align: right; }
-  #LowStockCounter-{{ block.id }} .zoro-stock__pulse {
-    flex: 0 0 auto;
-    width: .45rem;
-    height: .45rem;
-    border-radius: 50%;
-    background: var(--zoro-accent);
-    animation: zoro-pulse-{{ block.id }} 1.6s ease-out infinite;
-  }
-  #LowStockCounter-{{ block.id }} .zoro-stock__track {
-    height: var(--zoro-progress-height);
-    margin-top: .55rem;
-    overflow: hidden;
-    border-radius: 999px;
-    background: var(--zoro-track);
-  }
-  #LowStockCounter-{{ block.id }} .zoro-stock__fill {
-    display: block;
-    width: 0;
-    height: 100%;
-    border-radius: inherit;
-    background: var(--zoro-accent);
-    transition: width 260ms ease;
-  }
-  #LowStockCounter-{{ block.id }} .zoro-stock__badge,
-  .zoro-adaptive-stock-badge-{{ block.id }}[data-state="sold-out"] {
-    padding: .18rem .5rem;
-    border-radius: 999px;
-    color: var(--zoro-badge-text, {{ block.settings.badge_text_color }});
-    background: var(--zoro-badge-bg, {{ block.settings.badge_background }});
-    font-size: .84em;
-    font-weight: 800;
-  }
-  .zoro-adaptive-stock-badge-{{ block.id }} {
-    display: inline-flex;
-    align-items: center;
-    gap: .35rem;
-    width: fit-content;
-    max-width: calc(100% - 1rem);
-    padding: .3rem .5rem;
-    border-radius: 999px;
-    color: {{ block.settings.text_color }};
-    background: {{ block.settings.background_color }};
-    font-family: var(--font-body-family, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
-    font-size: {{ block.settings.font_size }}px;
-    font-weight: 800;
-    line-height: 1.2;
-    pointer-events: none;
-  }
-  .zoro-adaptive-stock-badge-{{ block.id }}::before {
-    content: "";
-    width: .4rem;
-    height: .4rem;
-    border-radius: 50%;
-    background: {{ block.settings.warning_color }};
-    animation: zoro-pulse-{{ block.id }} 1.6s ease-out infinite;
-  }
-  .zoro-adaptive-stock-badge-{{ block.id }}.zoro-adaptive-stock-badge--overlay {
-    position: absolute;
-    inset: auto auto .6rem .6rem;
-    z-index: 2;
-    margin: 0;
-    box-shadow: 0 .25rem .75rem rgba(0, 0, 0, .12);
-  }
-  @keyframes zoro-pulse-{{ block.id }} {
-    0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--zoro-accent, {{ block.settings.warning_color }}) 42%, transparent); transform: scale(.9); }
-    75%, 100% { box-shadow: 0 0 0 .55rem transparent; transform: scale(1); }
-  }
-  @media (max-width: 749px) {
-    #LowStockCounter-{{ block.id }} { font-size: var(--zoro-mobile-size); }
-    #LowStockCounter-{{ block.id }}.zoro-stock--hide-mobile { display: none !important; }
-    .zoro-adaptive-stock-badge-{{ block.id }} { font-size: {{ block.settings.mobile_font_size }}px; }
-  }
-  @media (min-width: 750px) {
-    #LowStockCounter-{{ block.id }}.zoro-stock--hide-desktop { display: none !important; }
-  }
-</style>
-
-<script>
-  (() => {
-    const root = document.getElementById('LowStockCounter-{{ block.id }}');
-    if (!root) return;
-
-    const pageType = root.dataset.pageType;
-    const threshold = Math.max(1, Number(root.dataset.threshold) || 10);
-    const displayMode = root.dataset.displayMode || 'always';
-    const relatedDisplay = root.dataset.relatedDisplay || 'simple';
-    const messageNode = root.querySelector('[data-zoro-message]');
-    const progress = root.querySelector('[data-zoro-progress]');
-    const fill = root.querySelector('[data-zoro-fill]');
-    const soldOutBadge = root.querySelector('[data-zoro-sold-out-badge]');
-    const variants = JSON.parse(root.querySelector('[data-zoro-variants]')?.textContent || '[]');
-    const collectionSource = document.querySelector('[data-zoro-collection-products="{{ block.id }}"]');
-    const productCache = new Map();
-    const simulatedCounts = new Map();
-
-    const cssEscape = (value) => window.CSS?.escape ? window.CSS.escape(value) : String(value).replace(/["\\]/g, '\\$&');
-    const normalize = (text) => String(text || '').replace(/\s+/g, ' ').trim();
-    const unsafeSurfaceSelector = [
-      'header',
-      '.header',
-      'cart-drawer',
-      'cart-notification',
-      '[aria-modal="true"]',
-      '[role="dialog"]',
-      '[id*="CartDrawer"]',
-      '[id*="cart-drawer"]',
-      '[id*="cart-notification"]',
-      '[class*="cart-drawer"]',
-      '[class*="cart-notification"]',
-      '[class*="drawer"]',
-      '[class*="modal"]'
-    ].join(',');
-    const isUnsafeSurface = (node) => Boolean(node?.closest?.(unsafeSurfaceSelector));
-    const hideRoot = () => {
-      root.hidden = true;
-      root.removeAttribute('data-zoro-inline');
-      root.style.setProperty('display', 'none', 'important');
-    };
-    const showRoot = () => {
-      root.style.removeProperty('display');
-      root.hidden = false;
-    };
-    const moneyParts = () => [
-      normalize(root.dataset.currentMoney),
-      normalize(root.dataset.currentPrice)
-    ].filter(Boolean);
-
-    const badgeFor = (item, useRelatedRules = false) => {
-      const available = item.available !== false && item.variantAvailable !== false;
-      const quantity = Number(item.quantity);
-      const tracked = item.tracked === true || (item.management && item.policy !== 'continue' && Number.isFinite(quantity));
-
-      if (!available) {
-        if (root.dataset.showSoldOut !== 'true') return null;
-        return { state: 'sold-out', count: 0, copy: root.dataset.soldOutMessage };
-      }
-
-      if (!tracked) {
-        if (root.dataset.showUntracked !== 'true') return null;
-        if (useRelatedRules && relatedDisplay === 'exact') {
-          const count = simulatedCountFor(item.handle || item.title || 'product');
-          return { state: 'low', count, copy: root.dataset.lowMessage.replace('[count]', count) };
-        }
-        return { state: 'untracked', count: threshold, copy: root.dataset.untrackedMessage };
-      }
-
-      if (!Number.isFinite(quantity)) return null;
-      if (displayMode === 'low_only' && quantity > threshold) return null;
-      if (useRelatedRules && relatedDisplay === 'simple' && quantity > threshold) return null;
-
-      if (root.dataset.countDisplay === 'general') {
-        return { state: 'low', count: quantity, copy: root.dataset.generalMessage };
-      }
-
-      return {
-        state: quantity <= threshold ? 'low' : 'stock',
-        count: quantity,
-        copy: root.dataset.lowMessage.replace('[count]', quantity)
-      };
-    };
-
-    const selectedVariant = () => {
-      const form = [...document.querySelectorAll('form[action*="/cart/add"]')]
-        .find((candidate) => !isUnsafeSurface(candidate));
-      const value = form?.querySelector('[name="id"]')?.value
-        || [...document.querySelectorAll('[name="id"]')].find((candidate) => !isUnsafeSurface(candidate))?.value
-        || root.dataset.variantId;
-      return variants.find((variant) => String(variant.id) === String(value)) || variants[0] || {};
-    };
-
-    const renderRoot = () => {
-      if (pageType !== 'product') {
-        hideRoot();
-        return;
-      }
-      const badge = badgeFor(selectedVariant());
-      if (!badge) {
-        hideRoot();
-        return;
-      }
-
-      messageNode.textContent = badge.copy;
-      root.dataset.state = badge.state;
-      showRoot();
-      if (soldOutBadge) soldOutBadge.hidden = badge.state !== 'sold-out';
-      if (progress) progress.hidden = root.dataset.showProgress !== 'true' || badge.state === 'sold-out';
-      if (fill) fill.style.width = `${Math.max(0, Math.min(100, (badge.count / threshold) * 100))}%`;
-      progress?.setAttribute('aria-valuenow', String(Math.max(0, Math.min(threshold, badge.count))));
-    };
-
-    const productInfoContainer = () => {
-      const form = [...document.querySelectorAll('form[action*="/cart/add"]')]
-        .find((candidate) => !isUnsafeSurface(candidate));
-      return form?.closest('section, product-info, .product__info-container, .product__info-wrapper, .product-form, [class*="product__info"], [class*="product-info"]')
-        || form?.parentElement
-        || document.querySelector('main');
-    };
-
-    const priceTarget = () => {
-      const container = productInfoContainer();
-      if (!container) return null;
-      const selectors = [
-        '.price',
-        '[class*="price"]',
-        '[id*="price"]',
-        '[data-product-price]',
-        '[data-price]'
-      ];
-      const prices = [...container.querySelectorAll(selectors.join(', '))]
-        .filter((node) => !node.contains(root) && !isUnsafeSurface(node) && moneyParts().some((part) => normalize(node.textContent).includes(part)));
-      if (prices[0]) return prices[0];
-
-      const walker = document.createTreeWalker(container, NodeFilter.SHOW_ELEMENT);
-      let node;
-      while ((node = walker.nextNode())) {
-        if (node.contains(root) || isUnsafeSurface(node)) continue;
-        if (moneyParts().some((part) => normalize(node.textContent).includes(part))) return node;
-      }
-      return null;
-    };
-
-    const purchaseTarget = () => {
-      const container = productInfoContainer();
-      if (!container) return null;
-      return [...container.querySelectorAll('button, [type="submit"]')]
-        .find((button) => !isUnsafeSurface(button) && /add to cart|buy it now|sold out/i.test(normalize(button.textContent)));
-    };
-
-    const placeRootNearPrice = () => {
-      if (pageType !== 'product') {
-        hideRoot();
-        return;
-      }
-      const price = priceTarget();
-      const purchase = purchaseTarget();
-      const anchor = price || purchase;
-      if (!anchor) {
-        hideRoot();
-        return;
-      }
-
-      root.dataset.zoroInline = 'price';
-      if (price) {
-        price.insertAdjacentElement('afterend', root);
-      } else {
-        purchase.insertAdjacentElement('beforebegin', root);
-      }
-      if (purchase) purchase.style.setProperty('margin-top', '1.15rem', 'important');
-      renderRoot();
-    };
-
-    const handleFromHref = (href) => {
-      try {
-        const match = new URL(href, location.origin).pathname.match(/\/products\/([^/?#]+)/);
-        return match ? decodeURIComponent(match[1]) : '';
-      } catch (error) {
-        return '';
-      }
-    };
-
-    const productCard = (handle, title = '') => {
-      const anchors = [...document.querySelectorAll(`a[href*="/products/${cssEscape(handle)}"]`)]
-        .filter((anchor) => !isUnsafeSurface(anchor));
-      for (const anchor of anchors) {
-        const card = anchor.closest('.card-wrapper, .card, li, article, [class*="grid__item"], [class*="product-card"]');
-        if (card && card.querySelector('img') && !card.contains(root) && !isUnsafeSurface(card)) return card;
-      }
-      if (!title) return null;
-      return [...document.querySelectorAll('.card-wrapper, .card, li, article, [class*="grid__item"], [class*="product-card"]')]
-        .find((node) => normalize(node.textContent).includes(title) && node.querySelector('img') && !node.contains(root) && !isUnsafeSurface(node));
-    };
-
-    const mediaTarget = (card) => {
-      if (!card) return null;
-      const target = card.querySelector('.card__media, .media, [class*="media"], [class*="image"]') || card.querySelector('img')?.parentElement;
-      if (!target) return null;
-      if (getComputedStyle(target).position === 'static') target.style.position = 'relative';
-      return target;
-    };
-
-    const makeBadge = (key, badge) => {
-      let node = document.querySelector(`[data-zoro-adaptive-stock="${cssEscape(key)}"]`);
-      if (!node) {
-        node = document.createElement('span');
-        node.className = 'zoro-adaptive-stock-badge-{{ block.id }} zoro-adaptive-stock-badge--overlay';
-        node.dataset.zoroAdaptiveStock = key;
-      }
-      node.dataset.state = badge.state;
-      node.textContent = badge.copy;
-      return node;
-    };
-
-    const placeCardBadge = (card, key, badge) => {
-      const target = mediaTarget(card);
-      if (!target) return false;
-      target.append(makeBadge(key, badge));
-      return true;
-    };
-
-    const simulatedCountFor = (handle) => {
-      if (simulatedCounts.has(handle)) return simulatedCounts.get(handle);
-      let hash = 0;
-      for (const char of String(handle)) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
-      const count = 3 + (hash % Math.max(1, threshold - 2));
-      simulatedCounts.set(handle, count);
-      return count;
-    };
-
-    const fetchProduct = (handle) => {
-      if (productCache.has(handle)) return productCache.get(handle);
-      const base = window.Shopify?.routes?.root || '/';
-      const request = fetch(`${base}products/${encodeURIComponent(handle)}.js`, {
-        credentials: 'same-origin',
-        headers: { Accept: 'application/json' }
-      })
-        .then((response) => response.ok ? response.json() : null)
-        .then((product) => {
-          if (!product) return null;
-          const variants = Array.isArray(product.variants) ? product.variants : [];
-          const variant = variants.find((item) => item.available) || variants[0] || {};
-          const quantity = Number(variant.inventory_quantity);
-          return {
-            handle,
-            title: product.title || handle,
-            available: product.available !== false,
-            variantAvailable: variant.available !== false,
-            quantity,
-            management: variant.inventory_management,
-            policy: variant.inventory_policy,
-            tracked: Boolean(variant.inventory_management) && variant.inventory_policy !== 'continue' && Number.isFinite(quantity)
-          };
-        })
-        .catch(() => null);
-      productCache.set(handle, request);
-      return request;
-    };
-
-    const renderCollection = () => {
-      if (!collectionSource || pageType === 'product') return;
-      hideRoot();
-      const products = JSON.parse(collectionSource.textContent || '[]');
-      products.forEach((product) => {
-        const badge = badgeFor(product, true);
-        if (!badge) return;
-        placeCardBadge(productCard(product.handle, product.title), `{{ block.id }}-collection-${product.handle}`, badge);
-      });
-    };
-
-    const renderRelated = async () => {
-      if (pageType !== 'product' || relatedDisplay === 'off') return;
-      const current = root.dataset.currentHandle;
-      const handles = new Map();
-      [...document.querySelectorAll('a[href*="/products/"]')].filter((anchor) => !isUnsafeSurface(anchor)).forEach((anchor) => {
-        const handle = handleFromHref(anchor.href);
-        if (!handle || handle === current || handles.has(handle)) return;
-        const card = productCard(handle);
-        if (card) handles.set(handle, card);
-      });
-      await Promise.all([...handles].map(async ([handle, card]) => {
-        const item = await fetchProduct(handle);
-        if (!item) return;
-        const badgeItem = item.tracked || relatedDisplay !== 'exact'
-          ? item
-          : { ...item, tracked: true, quantity: simulatedCountFor(handle) };
-        const badge = badgeFor(badgeItem, true);
-        if (badge) placeCardBadge(card, `{{ block.id }}-related-${handle}`, badge);
-      }));
-    };
-
-    const updateAll = () => {
-      placeRootNearPrice();
-      renderCollection();
-      renderRelated();
-    };
-
-    updateAll();
-    document.addEventListener('shopify:section:load', () => window.setTimeout(updateAll, 60));
-    ['variant:change', 'product:variant-change', 'variantChanged', 'shopify:variant:change', 'change'].forEach((eventName) => {
-      document.addEventListener(eventName, () => window.setTimeout(updateAll, 80));
-    });
-    window.addEventListener('resize', () => window.setTimeout(placeRootNearPrice, 80), { passive: true });
-    window.setInterval(() => {
-      let changed = false;
-      simulatedCounts.forEach((count, handle) => {
-        if (count > 3) {
-          simulatedCounts.set(handle, count - 1);
-          changed = true;
-        }
-      });
-      if (changed) renderRelated();
-    }, 7000);
-  })();
-</script>
 
 {% schema %}
 {
@@ -584,51 +215,13 @@
   "settings": [
     {
       "type": "header",
-      "content": "Inventory rules"
+      "content": "Inventory"
     },
     {
       "type": "number",
       "id": "low_stock_threshold",
       "label": "Low-stock threshold",
-      "default": 10,
-      "info": "Used only when Visibility is Only when stock is low. This does not set the inventory count."
-    },
-    {
-      "type": "select",
-      "id": "display_mode",
-      "label": "Visibility",
-      "default": "always",
-      "options": [
-        { "value": "always", "label": "Always show real inventory" },
-        { "value": "low_only", "label": "Only when stock is low" }
-      ]
-    },
-    {
-      "type": "select",
-      "id": "count_display",
-      "label": "Tracked inventory display",
-      "default": "exact",
-      "options": [
-        { "value": "exact", "label": "Show exact count" },
-        { "value": "general", "label": "Show general message" }
-      ]
-    },
-    {
-      "type": "select",
-      "id": "related_display",
-      "label": "Related product badges",
-      "default": "simple",
-      "options": [
-        { "value": "simple", "label": "Simple low stock / sold out badges" },
-        { "value": "exact", "label": "Exact or countdown counts" },
-        { "value": "off", "label": "Hide related product badges" }
-      ]
-    },
-    {
-      "type": "checkbox",
-      "id": "show_untracked",
-      "label": "Show message for untracked inventory",
-      "default": true
+      "default": 10
     },
     {
       "type": "checkbox",
@@ -637,74 +230,44 @@
       "default": true
     },
     {
-      "type": "checkbox",
-      "id": "show_sold_out_badge",
-      "label": "Show sold-out badge",
-      "default": true
-    },
-    {
-      "type": "text",
-      "id": "sold_out_badge_text",
-      "label": "Sold-out badge text",
-      "default": "Sold out"
-    },
-    {
-      "type": "header",
-      "content": "Messages"
-    },
-    {
       "type": "text",
       "id": "alert_text",
-      "label": "Exact-count message",
-      "default": "Hurry! Only [count] items left in stock!",
-      "info": "Use [count] for the selected variant's real inventory."
-    },
-    {
-      "type": "text",
-      "id": "general_low_stock_text",
-      "label": "General low-stock message",
-      "default": "Low stock - order soon!"
-    },
-    {
-      "type": "text",
-      "id": "untracked_text",
-      "label": "Untracked inventory message",
-      "default": "Popular right now"
+      "label": "Low-stock text",
+      "default": "Hurry! Only [count] items left in stock!"
     },
     {
       "type": "text",
       "id": "sold_out_text",
-      "label": "Sold-out message",
+      "label": "Sold-out text",
       "default": "This item is currently sold out."
     },
     {
-      "type": "select",
-      "id": "message_language",
-      "label": "Message language",
-      "default": "custom",
-      "options": [
-        { "value": "custom", "label": "Custom messages below" },
-        { "value": "auto", "label": "Storefront language automatically" },
-        { "value": "en", "label": "English" },
-        { "value": "es", "label": "Spanish" },
-        { "value": "fr", "label": "French" },
-        { "value": "de", "label": "German" }
-      ]
-    },
-    {
       "type": "header",
-      "content": "Appearance"
+      "content": "Style"
     },
     {
-      "type": "select",
-      "id": "layout",
-      "label": "Layout",
-      "default": "card",
-      "options": [
-        { "value": "card", "label": "Card" },
-        { "value": "compact", "label": "Compact pill" },
-        { "value": "text", "label": "Text only" }
-      ]
+      "type": "color",
+      "id": "background_color",
+      "label": "Background color",
+      "default": "#FFF4F4"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text color",
+      "default": "#8E1F1F"
+    },
+    {
+      "type": "color",
+      "id": "warning_color",
+      "label": "Warning color",
+      "default": "#D72C0D"
+    },
+    {
+      "type": "color",
+      "id": "track_color",
+      "label": "Progress track color",
+      "default": "#F2C6C1"
     },
     {
       "type": "checkbox",
@@ -713,109 +276,44 @@
       "default": true
     },
     {
-      "type": "checkbox",
-      "id": "show_pulse",
-      "label": "Show pulsing indicator",
-      "default": true
-    },
-    {
-      "type": "select",
-      "id": "alignment",
-      "label": "Text alignment",
-      "default": "left",
-      "options": [
-        { "value": "left", "label": "Left" },
-        { "value": "center", "label": "Center" },
-        { "value": "right", "label": "Right" }
-      ]
-    },
-    {
-      "type": "checkbox",
-      "id": "show_on_mobile",
-      "label": "Show on mobile",
-      "default": true
-    },
-    {
-      "type": "checkbox",
-      "id": "show_on_desktop",
-      "label": "Show on desktop",
-      "default": true
+      "type": "range",
+      "id": "corner_radius",
+      "label": "Corner radius",
+      "min": 0,
+      "max": 24,
+      "step": 1,
+      "default": 10,
+      "unit": "px"
     },
     {
       "type": "range",
       "id": "font_size",
-      "min": 12,
-      "max": 20,
-      "step": 1,
-      "unit": "px",
       "label": "Font size",
-      "default": 14
-    },
-    {
-      "type": "range",
-      "id": "mobile_font_size",
       "min": 12,
-      "max": 20,
+      "max": 22,
       "step": 1,
-      "unit": "px",
-      "label": "Mobile font size",
-      "default": 14
+      "default": 15,
+      "unit": "px"
     },
     {
       "type": "range",
-      "id": "corner_radius",
+      "id": "spacing_top",
+      "label": "Space above",
       "min": 0,
-      "max": 20,
-      "step": 1,
-      "unit": "px",
-      "label": "Corner radius",
-      "default": 8
+      "max": 40,
+      "step": 2,
+      "default": 12,
+      "unit": "px"
     },
     {
       "type": "range",
-      "id": "progress_height",
-      "min": 2,
-      "max": 10,
-      "step": 1,
-      "unit": "px",
-      "label": "Progress bar height",
-      "default": 4
-    },
-    {
-      "type": "color",
-      "id": "background_color",
-      "label": "Background",
-      "default": "#fff4f4"
-    },
-    {
-      "type": "color",
-      "id": "text_color",
-      "label": "Text",
-      "default": "#8e1f1f"
-    },
-    {
-      "type": "color",
-      "id": "warning_color",
-      "label": "Indicator and progress",
-      "default": "#d72c0d"
-    },
-    {
-      "type": "color",
-      "id": "track_color",
-      "label": "Progress track",
-      "default": "#f2c6c1"
-    },
-    {
-      "type": "color",
-      "id": "badge_background",
-      "label": "Sold-out badge background",
-      "default": "#8e1f1f"
-    },
-    {
-      "type": "color",
-      "id": "badge_text_color",
-      "label": "Sold-out badge text",
-      "default": "#ffffff"
+      "id": "spacing_bottom",
+      "label": "Space below",
+      "min": 0,
+      "max": 40,
+      "step": 2,
+      "default": 16,
+      "unit": "px"
     }
   ]
 }
