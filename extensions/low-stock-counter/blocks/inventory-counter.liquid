@@ -54,6 +54,7 @@
     --zoro-size: {{ block.settings.font_size }}px;
     --zoro-mobile-size: {{ block.settings.mobile_font_size }}px;
     --zoro-progress-height: {{ block.settings.progress_height }}px;
+    {% unless is_product_page %}display: none !important;{% endunless %}
   "
   data-zoro-stock
   data-page-type="{{ request.page_type }}"
@@ -151,10 +152,19 @@
   #LowStockCounter-{{ block.id }}[hidden] { display: none !important; }
   #LowStockCounter-{{ block.id }}[data-zoro-inline="price"] {
     display: block !important;
-    position: static !important;
-    z-index: 0 !important;
-    margin-top: .85rem !important;
-    margin-bottom: 1.75rem !important;
+    position: relative !important;
+    inset: auto !important;
+    z-index: 1 !important;
+    transform: none !important;
+    width: 100% !important;
+    flex: 0 0 100% !important;
+    grid-column: 1 / -1 !important;
+    margin-top: 1rem !important;
+    margin-bottom: 2rem !important;
+    pointer-events: none;
+  }
+  #LowStockCounter-{{ block.id }}[data-zoro-inline="price"] + * {
+    margin-top: 1.15rem !important;
   }
   #LowStockCounter-{{ block.id }}.zoro-stock--compact {
     padding: .42rem .6rem;
@@ -270,6 +280,31 @@
 
     const cssEscape = (value) => window.CSS?.escape ? window.CSS.escape(value) : String(value).replace(/["\\]/g, '\\$&');
     const normalize = (text) => String(text || '').replace(/\s+/g, ' ').trim();
+    const unsafeSurfaceSelector = [
+      'header',
+      '.header',
+      'cart-drawer',
+      'cart-notification',
+      '[aria-modal="true"]',
+      '[role="dialog"]',
+      '[id*="CartDrawer"]',
+      '[id*="cart-drawer"]',
+      '[id*="cart-notification"]',
+      '[class*="cart-drawer"]',
+      '[class*="cart-notification"]',
+      '[class*="drawer"]',
+      '[class*="modal"]'
+    ].join(',');
+    const isUnsafeSurface = (node) => Boolean(node?.closest?.(unsafeSurfaceSelector));
+    const hideRoot = () => {
+      root.hidden = true;
+      root.removeAttribute('data-zoro-inline');
+      root.style.setProperty('display', 'none', 'important');
+    };
+    const showRoot = () => {
+      root.style.removeProperty('display');
+      root.hidden = false;
+    };
     const moneyParts = () => [
       normalize(root.dataset.currentMoney),
       normalize(root.dataset.currentPrice)
@@ -310,23 +345,28 @@
     };
 
     const selectedVariant = () => {
-      const form = document.querySelector('form[action*="/cart/add"]');
+      const form = [...document.querySelectorAll('form[action*="/cart/add"]')]
+        .find((candidate) => !isUnsafeSurface(candidate));
       const value = form?.querySelector('[name="id"]')?.value
-        || document.querySelector('[name="id"]')?.value
+        || [...document.querySelectorAll('[name="id"]')].find((candidate) => !isUnsafeSurface(candidate))?.value
         || root.dataset.variantId;
       return variants.find((variant) => String(variant.id) === String(value)) || variants[0] || {};
     };
 
     const renderRoot = () => {
+      if (pageType !== 'product') {
+        hideRoot();
+        return;
+      }
       const badge = badgeFor(selectedVariant());
       if (!badge) {
-        root.hidden = true;
+        hideRoot();
         return;
       }
 
       messageNode.textContent = badge.copy;
       root.dataset.state = badge.state;
-      root.hidden = false;
+      showRoot();
       if (soldOutBadge) soldOutBadge.hidden = badge.state !== 'sold-out';
       if (progress) progress.hidden = root.dataset.showProgress !== 'true' || badge.state === 'sold-out';
       if (fill) fill.style.width = `${Math.max(0, Math.min(100, (badge.count / threshold) * 100))}%`;
@@ -334,7 +374,8 @@
     };
 
     const productInfoContainer = () => {
-      const form = document.querySelector('form[action*="/cart/add"]');
+      const form = [...document.querySelectorAll('form[action*="/cart/add"]')]
+        .find((candidate) => !isUnsafeSurface(candidate));
       return form?.closest('section, product-info, .product__info-container, .product__info-wrapper, .product-form, [class*="product__info"], [class*="product-info"]')
         || form?.parentElement
         || document.querySelector('main');
@@ -351,13 +392,13 @@
         '[data-price]'
       ];
       const prices = [...container.querySelectorAll(selectors.join(', '))]
-        .filter((node) => !node.contains(root) && moneyParts().some((part) => normalize(node.textContent).includes(part)));
+        .filter((node) => !node.contains(root) && !isUnsafeSurface(node) && moneyParts().some((part) => normalize(node.textContent).includes(part)));
       if (prices[0]) return prices[0];
 
       const walker = document.createTreeWalker(container, NodeFilter.SHOW_ELEMENT);
       let node;
       while ((node = walker.nextNode())) {
-        if (node.contains(root)) continue;
+        if (node.contains(root) || isUnsafeSurface(node)) continue;
         if (moneyParts().some((part) => normalize(node.textContent).includes(part))) return node;
       }
       return null;
@@ -367,16 +408,19 @@
       const container = productInfoContainer();
       if (!container) return null;
       return [...container.querySelectorAll('button, [type="submit"]')]
-        .find((button) => /add to cart|buy it now|sold out/i.test(normalize(button.textContent)));
+        .find((button) => !isUnsafeSurface(button) && /add to cart|buy it now|sold out/i.test(normalize(button.textContent)));
     };
 
     const placeRootNearPrice = () => {
-      if (pageType !== 'product') return;
+      if (pageType !== 'product') {
+        hideRoot();
+        return;
+      }
       const price = priceTarget();
       const purchase = purchaseTarget();
       const anchor = price || purchase;
       if (!anchor) {
-        root.hidden = true;
+        hideRoot();
         return;
       }
 
@@ -386,6 +430,7 @@
       } else {
         purchase.insertAdjacentElement('beforebegin', root);
       }
+      if (purchase) purchase.style.setProperty('margin-top', '1.15rem', 'important');
       renderRoot();
     };
 
@@ -399,14 +444,15 @@
     };
 
     const productCard = (handle, title = '') => {
-      const anchors = [...document.querySelectorAll(`a[href*="/products/${cssEscape(handle)}"]`)];
+      const anchors = [...document.querySelectorAll(`a[href*="/products/${cssEscape(handle)}"]`)]
+        .filter((anchor) => !isUnsafeSurface(anchor));
       for (const anchor of anchors) {
         const card = anchor.closest('.card-wrapper, .card, li, article, [class*="grid__item"], [class*="product-card"]');
-        if (card && card.querySelector('img') && !card.contains(root)) return card;
+        if (card && card.querySelector('img') && !card.contains(root) && !isUnsafeSurface(card)) return card;
       }
       if (!title) return null;
       return [...document.querySelectorAll('.card-wrapper, .card, li, article, [class*="grid__item"], [class*="product-card"]')]
-        .find((node) => normalize(node.textContent).includes(title) && node.querySelector('img') && !node.contains(root));
+        .find((node) => normalize(node.textContent).includes(title) && node.querySelector('img') && !node.contains(root) && !isUnsafeSurface(node));
     };
 
     const mediaTarget = (card) => {
@@ -476,7 +522,7 @@
 
     const renderCollection = () => {
       if (!collectionSource || pageType === 'product') return;
-      root.hidden = true;
+      hideRoot();
       const products = JSON.parse(collectionSource.textContent || '[]');
       products.forEach((product) => {
         const badge = badgeFor(product, true);
@@ -489,7 +535,7 @@
       if (pageType !== 'product' || relatedDisplay === 'off') return;
       const current = root.dataset.currentHandle;
       const handles = new Map();
-      [...document.querySelectorAll('a[href*="/products/"]')].forEach((anchor) => {
+      [...document.querySelectorAll('a[href*="/products/"]')].filter((anchor) => !isUnsafeSurface(anchor)).forEach((anchor) => {
         const handle = handleFromHref(anchor.href);
         if (!handle || handle === current || handles.has(handle)) return;
         const card = productCard(handle);
