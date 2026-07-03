@@ -7,10 +7,9 @@ const blockPath = new URL(
   import.meta.url,
 );
 const blocksPath = new URL('../extensions/low-stock-counter/blocks/', import.meta.url);
-const localesPath = new URL('../extensions/low-stock-counter/locales/', import.meta.url);
 const block = readFileSync(blockPath, 'utf8');
 
-test('extension exposes one unified app block without NEW in the name', () => {
+test('extension exposes one clean low stock block', () => {
   assert.deepEqual(
     readdirSync(blocksPath).filter((name) => name.endsWith('.liquid')).sort(),
     ['inventory-counter.liquid'],
@@ -19,28 +18,55 @@ test('extension exposes one unified app block without NEW in the name', () => {
   assert.doesNotMatch(block, /Low stock counter NEW/);
 });
 
-test('schema is valid JSON with unique setting IDs', () => {
+test('schema is valid and keeps only core merchant settings', () => {
   const match = block.match(/{% schema %}\s*([\s\S]*?)\s*{% endschema %}/);
   assert.ok(match, 'schema block is present');
+
   const schema = JSON.parse(match[1]);
+  assert.equal(schema.target, 'section');
+
   const ids = schema.settings.flatMap((setting) => setting.id ? [setting.id] : []);
   assert.equal(new Set(ids).size, ids.length);
+
   for (const id of [
     'low_stock_threshold',
-    'display_mode',
-    'related_display',
+    'show_sold_out',
     'alert_text',
-    'message_language',
-    'show_sold_out_badge',
+    'sold_out_text',
     'background_color',
     'text_color',
     'warning_color',
+    'track_color',
+    'show_progress',
+    'spacing_top',
+    'spacing_bottom',
   ]) {
     assert.ok(ids.includes(id), `${id} setting exists`);
   }
 });
 
-test('embedded JavaScript has valid syntax after Liquid replacement', () => {
+test('block is product-page only and renders in normal theme flow', () => {
+  assert.match(block, /request\.page_type == 'product'/);
+  assert.match(block, /{% if is_product_page %}/);
+  assert.match(block, /position: static/);
+  assert.match(block, /z-index: auto/);
+  assert.match(block, /margin: var\(--zoro-low-stock-gap-top\) 0 var\(--zoro-low-stock-gap-bottom\)/);
+  assert.doesNotMatch(block, /insertAdjacentElement/);
+  assert.doesNotMatch(block, /appendChild/);
+  assert.doesNotMatch(block, /position:\s*fixed/);
+  assert.doesNotMatch(block, /position:\s*absolute/);
+});
+
+test('counter stays backendless and reads native Shopify variant inventory', () => {
+  assert.match(block, /variant\.inventory_quantity/);
+  assert.match(block, /variant\.inventory_management/);
+  assert.match(block, /variant\.inventory_policy/);
+  assert.doesNotMatch(block, /https?:\/\/[^'"]+/);
+  assert.doesNotMatch(block, /fetch\(/);
+  assert.doesNotMatch(block, /XMLHttpRequest|WebSocket|localStorage|sessionStorage/);
+});
+
+test('embedded JavaScript is valid after Liquid replacement', () => {
   const scripts = [...block.matchAll(/<script>\s*([\s\S]*?)\s*<\/script>/g)]
     .map((match) => match[1])
     .filter((script) => !script.trim().startsWith('['));
@@ -48,82 +74,5 @@ test('embedded JavaScript has valid syntax after Liquid replacement', () => {
   assert.ok(scripts.length >= 1, 'JavaScript block is present');
   for (const script of scripts) {
     assert.doesNotThrow(() => new Function(script.replaceAll('{{ block.id }}', 'test-block')));
-  }
-});
-
-test('counter stays backendless and reads native Shopify product data', () => {
-  assert.match(block, /variant\.inventory_quantity/);
-  assert.match(block, /variant\.inventory_management/);
-  assert.match(block, /collection\.products/);
-  assert.match(block, /fetch\(`\$\{base\}products\/\$\{encodeURIComponent\(handle\)\}\.js`/);
-  assert.doesNotMatch(block, /https?:\/\/[^'"]+/);
-  assert.doesNotMatch(block, /XMLHttpRequest|WebSocket|localStorage/);
-});
-
-test('product page block is inserted beside pricing, not as a floating portal', () => {
-  assert.match(block, /const priceTarget = \(\) =>/);
-  assert.match(block, /price\.insertAdjacentElement\('afterend', root\)/);
-  assert.match(block, /purchase\.insertAdjacentElement\('beforebegin', root\)/);
-  assert.match(block, /data-zoro-inline="price"/);
-  assert.match(block, /grid-column: 1 \/ -1 !important/);
-  assert.match(block, /purchase\.style\.setProperty\('margin-top', '1\.15rem', 'important'\)/);
-  assert.doesNotMatch(block, /document\.body\.appendChild/);
-  assert.doesNotMatch(block, /position:\s*fixed/);
-  assert.doesNotMatch(block, /LowStockCounterPortal/);
-  assert.doesNotMatch(block, /positionProductPortal|renderProductPortal|retryProductPlacement/);
-});
-
-test('collection and related product badges attach to product media only', () => {
-  assert.match(block, /data-zoro-collection-products="{{ block\.id }}"/);
-  assert.match(block, /const renderCollection = \(\) =>/);
-  assert.match(block, /const renderRelated = async \(\) =>/);
-  assert.match(block, /const mediaTarget = \(card\) =>/);
-  assert.match(block, /target\.append\(makeBadge\(key, badge\)\)/);
-  assert.match(block, /zoro-adaptive-stock-badge--overlay/);
-  assert.match(block, /const isUnsafeSurface = \(node\) =>/);
-  assert.match(block, /cart-drawer/);
-  assert.match(block, /cart-notification/);
-  assert.match(block, /\[role="dialog"\]/);
-  assert.match(block, /\.filter\(\(anchor\) => !isUnsafeSurface\(anchor\)\)/);
-  assert.doesNotMatch(block, /renderInline/);
-  assert.doesNotMatch(block, /data-zoro-cart-items/);
-  assert.doesNotMatch(block, /cart:updated/);
-});
-
-test('main app block is hidden on non-product pages and when no valid product anchor exists', () => {
-  assert.match(block, /{% unless is_product_page %}display: none !important;{% endunless %}/);
-  assert.match(block, /const hideRoot = \(\) =>/);
-  assert.match(block, /root\.style\.setProperty\('display', 'none', 'important'\)/);
-  assert.match(block, /if \(pageType !== 'product'\) \{\s*hideRoot\(\);/);
-});
-
-test('visibility and related badge controls are present', () => {
-  assert.match(block, /displayMode === 'low_only'/);
-  assert.match(block, /relatedDisplay === 'off'/);
-  assert.match(block, /relatedDisplay === 'exact'/);
-  assert.match(block, /simulatedCountFor/);
-  assert.match(block, /root\.dataset\.showSoldOut/);
-});
-
-test('language selector exposes automatic and explicit languages', () => {
-  for (const value of ['auto', 'en', 'es', 'fr', 'de', 'custom']) {
-    assert.match(block, new RegExp(`"value":\\s*"${value}"`));
-  }
-});
-
-test('locale files contain required storefront keys', () => {
-  const required = [
-    'low_stock_exact',
-    'low_stock_general',
-    'untracked',
-    'sold_out',
-    'editor_help',
-  ];
-
-  for (const file of readdirSync(localesPath).filter((name) => name.endsWith('.json'))) {
-    const locale = JSON.parse(readFileSync(new URL(file, localesPath), 'utf8'));
-    for (const key of required) {
-      assert.equal(typeof locale.inventory_counter?.[key], 'string', `${file}: ${key}`);
-    }
   }
 });
