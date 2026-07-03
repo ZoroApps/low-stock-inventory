@@ -65,6 +65,8 @@ test('product page block is inserted beside pricing, not as a floating portal', 
   assert.match(block, /price\.insertAdjacentElement\('afterend', root\)/);
   assert.match(block, /purchase\.insertAdjacentElement\('beforebegin', root\)/);
   assert.match(block, /data-zoro-inline="price"/);
+  assert.match(block, /grid-column: 1 \/ -1 !important/);
+  assert.match(block, /purchase\.style\.setProperty\('margin-top', '1\.15rem', 'important'\)/);
   assert.doesNotMatch(block, /document\.body\.appendChild/);
   assert.doesNotMatch(block, /position:\s*fixed/);
   assert.doesNotMatch(block, /LowStockCounterPortal/);
@@ -78,9 +80,21 @@ test('collection and related product badges attach to product media only', () =>
   assert.match(block, /const mediaTarget = \(card\) =>/);
   assert.match(block, /target\.append\(makeBadge\(key, badge\)\)/);
   assert.match(block, /zoro-adaptive-stock-badge--overlay/);
+  assert.match(block, /const isUnsafeSurface = \(node\) =>/);
+  assert.match(block, /cart-drawer/);
+  assert.match(block, /cart-notification/);
+  assert.match(block, /\[role="dialog"\]/);
+  assert.match(block, /\.filter\(\(anchor\) => !isUnsafeSurface\(anchor\)\)/);
   assert.doesNotMatch(block, /renderInline/);
   assert.doesNotMatch(block, /data-zoro-cart-items/);
   assert.doesNotMatch(block, /cart:updated/);
+});
+
+test('main app block is hidden on non-product pages and when no valid product anchor exists', () => {
+  assert.match(block, /{% unless is_product_page %}display: none !important;{% endunless %}/);
+  assert.match(block, /const hideRoot = \(\) =>/);
+  assert.match(block, /root\.style\.setProperty\('display', 'none', 'important'\)/);
+  assert.match(block, /if \(pageType !== 'product'\) \{\s*hideRoot\(\);/);
 });
 
 test('visibility and related badge controls are present', () => {
